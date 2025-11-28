@@ -23,10 +23,14 @@ The **Video Truth Record (.vtr)** is an open standard for **Hardware-Signed Medi
 
 ## Repository Structure
 
-*   `/whitepaper`: The full "Seth Protocol" master plan and economic model.
-*   `/specs`: The technical Request For Comments (RFC) documents defining the standard.
-*   `/poc`: Python proof-of-concept for the metadata container and verification logic.
-*   `/docs`: Documentation files.
+The repository is organized as follows:
+
+*   `/vtr-standard`: The main project directory containing the standard definitions and reference implementation.
+    *   `/whitepaper`: The full "Seth Protocol" master plan and economic model.
+    *   `/specs`: The technical Request For Comments (RFC) documents defining the standard.
+    *   `/poc`: Python proof-of-concept for the metadata container and verification logic (Reference Implementation).
+    *   `/docs`: Documentation files.
+*   `/poc`: A standalone Proof of Concept implementation (simplified).
 
 ## Installation & Setup
 
@@ -47,12 +51,22 @@ No external dependencies are required for the Proof of Concept (POC) as it uses 
 
 ## Usage Guide
 
-The Proof of Concept (POC) demonstrates how to generate a VTR sidecar file for a video.
+You can run the Proof of Concept using either the standalone script or the package within `vtr-standard`.
 
-To run the proof-of-concept script:
+### Running the Standalone POC
+
+To run the simplified proof-of-concept script:
 
 ```bash
 python3 -m poc.vtr_container
+```
+
+### Running the Standard Reference POC
+
+To run the reference implementation in `vtr-standard`:
+
+```bash
+python3 -m vtr-standard.poc.vtr_container
 ```
 
 ### Output

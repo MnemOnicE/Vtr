@@ -24,13 +24,38 @@ The Video Truth Record is a new open standard that inverts the model. Instead of
 *   `poc/`: Proof of Concept Python code for generating hardware-signed sidecars.
 *   `docs/`: Economic models and legal frameworks.
 
+## Installation & Setup
+
+### Prerequisites
+
+*   Python 3.6 or higher.
+
+### Installation
+
+No external dependencies are required for the Proof of Concept (POC) as it uses the Python standard library.
+
 ## Usage
+
+The Proof of Concept (POC) demonstrates how to generate a VTR sidecar file for a video.
 
 Run the Proof of Concept generator:
 
 ```bash
 python3 -m vtr-standard.poc.vtr_container
 ```
+
+This will produce a `.vtr.json` file (e.g., `protest_footage.mp4.vtr.json`) containing the simulated cryptographic proofs.
+
+### API Reference
+
+#### `vtr_standard.poc.vtr_container`
+
+Main module for handling VTR containers.
+
+*   `VTRContainer`: Class to manage video and sensor association.
+    *   `create_sidecar(allow_ai_training=False)`: Generates the JSON sidecar.
+    *   `_generate_zk_proof()`: (Internal) Simulates ZK proof generation.
+    *   `_check_liveness()`: (Internal) Simulates liveness checks.
 
 ## License
 

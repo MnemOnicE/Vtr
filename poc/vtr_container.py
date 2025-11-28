@@ -35,7 +35,7 @@ class VTRContainer:
                 may be used for AI training datasets. Defaults to False.
 
         Returns:
-            None
+            None: This method writes the sidecar file to disk and does not return a value.
         """
         sidecar = {
             "vtr_version": "2.0",
