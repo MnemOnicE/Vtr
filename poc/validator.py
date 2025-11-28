@@ -96,25 +96,51 @@ class VTRValidator:
         public_key = hw_sig["public_key"]
         zk_proof = hw_sig["zk_proof"]
         timestamp = hw_sig["timestamp"]
+        # Extract optional Chain of Custody link
+        previous_signature = hw_sig.get("previous_signature_link")
 
         # Verify using MockPRNU static method
-        # This re-hashes the video content and checks if it matches the proof signed by the public key
+        # This re-hashes the video content (via Merkle Tree) and checks if it matches the proof signed by the public key
+        # We pass previous_signature to include it in the hash reconstruction if present
         is_signature_valid = MockPRNU.verify_zk_proof(
             public_key=public_key,
             video_path=video_path,
             timestamp=timestamp,
-            zk_proof=zk_proof
+            zk_proof=zk_proof,
+            previous_signature=previous_signature
         )
 
         if is_signature_valid:
+            # Additional check: Verify the Merkle Root matches the one in sidecar if present
+            # This is a secondary integrity check, although cryptographic signature is the primary one.
+            sidecar_merkle_root = hw_sig.get("merkle_root")
+            actual_merkle_root = MockPRNU._static_hash_video_content(video_path)
+
+            if sidecar_merkle_root and sidecar_merkle_root != actual_merkle_root:
+                return VerificationResult(
+                    is_valid=False,
+                    error_code="MERKLE_MISMATCH",
+                    message="Sidecar Merkle Root does not match actual video Merkle Root.",
+                    details={
+                        "sidecar_root": sidecar_merkle_root,
+                        "actual_root": actual_merkle_root
+                    }
+                )
+
+            details = {
+                    "vtr_version": sidecar_data["vtr_version"],
+                    "timestamp": timestamp,
+                    "liveness": hw_sig["liveness_flag"],
+                    "merkle_root": actual_merkle_root
+            }
+            if previous_signature:
+                details["chained_to_previous_proof"] = True
+                details["previous_proof_hash"] = previous_signature
+
             return VerificationResult(
                 is_valid=True,
                 message="VTR container is valid.",
-                details={
-                    "vtr_version": sidecar_data["vtr_version"],
-                    "timestamp": timestamp,
-                    "liveness": hw_sig["liveness_flag"]
-                }
+                details=details
             )
         else:
             return VerificationResult(

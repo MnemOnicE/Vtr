@@ -1,6 +1,7 @@
 import hashlib
 import time
 import os
+from .merkle import MerkleTree
 
 class MockPRNU:
     """Simulates the Hardware Root of Trust and PRNU (Photo Response Non-Uniformity) logic.
@@ -30,47 +31,47 @@ class MockPRNU:
         return hashlib.sha256(self.sensor_id.encode()).hexdigest()
 
     def _hash_video_content(self, video_path):
-        """Calculates the SHA-256 hash of the video file content.
+        """Calculates the Merkle Root of the video file content.
 
         Args:
             video_path (str): Path to the video file.
 
         Returns:
-            str: The hexadecimal SHA-256 hash of the file content.
+            str: The hexadecimal Merkle Root of the file content.
         """
         return self._static_hash_video_content(video_path)
 
-    def generate_zk_proof(self, video_path, timestamp):
+    def generate_zk_proof(self, video_path, timestamp, previous_signature=None):
         """Simulates generating a Zero-Knowledge Proof (ZKP).
 
         This method simulates the creation of a cryptographic proof that binds the sensor ID,
-        video content, and timestamp together, ensuring authenticity without revealing sensitive
-        raw data.
+        video content, timestamp, and optionally the previous signature together.
 
         Args:
             video_path (str): The file path to the video being authenticated.
             timestamp (float): The Unix timestamp of when the video was recorded.
+            previous_signature (str, optional): The ZK proof of the previous video in the chain.
 
         Returns:
             str: A hexadecimal string representing the simulated Zero-Knowledge Proof (hash).
         """
-        # 1. Calculate Hash of the actual Video Content (prevents sidecar swapping)
+        # 1. Calculate Hash of the actual Video Content (Merkle Root)
         video_hash = self._hash_video_content(video_path)
 
         # 2. Derive the Public Verification Key
         verification_key = self.get_public_key()
 
         # 3. Create the Proof
-        # SIMULATION: We sign (Verification Key + Timestamp + Video Hash)
-        # In a real ZK system, we would use the Private Key (sensor_id) to generate a proof
-        # that can be verified against the Public Key.
-        # Here, to allow our Mock Validator to work, we simulate the "binding" by
-        # hashing the Public Key with the data.
+        # SIMULATION: We sign (Verification Key + Timestamp + Video Hash + Previous Signature)
         data_to_sign = f"{verification_key}{timestamp}{video_hash}"
+
+        if previous_signature:
+            data_to_sign += previous_signature
+
         return hashlib.sha256(data_to_sign.encode()).hexdigest()
 
     @staticmethod
-    def verify_zk_proof(public_key, video_path, timestamp, zk_proof):
+    def verify_zk_proof(public_key, video_path, timestamp, zk_proof, previous_signature=None):
         """Verifies a simulated Zero-Knowledge Proof.
 
         Args:
@@ -78,36 +79,28 @@ class MockPRNU:
             video_path (str): The path to the video file to verify.
             timestamp (float): The timestamp from the sidecar.
             zk_proof (str): The proof string to verify.
+            previous_signature (str, optional): The linked previous signature, if any.
 
         Returns:
             bool: True if the proof is valid for the given video and key, False otherwise.
         """
-        # Re-calculate video hash
-        # Note: We need a helper here too. Since this is static, we can't call self._hash_video_content
-        # We'll duplicate the logic or instantiate a dummy?
-        # Cleaner: Make _hash_video_content static.
+        # Re-calculate video hash (Merkle Root)
         video_hash = MockPRNU._static_hash_video_content(video_path)
 
         # Re-construct the expected proof
         expected_data = f"{public_key}{timestamp}{video_hash}"
+
+        if previous_signature:
+            expected_data += previous_signature
+
         expected_proof = hashlib.sha256(expected_data.encode()).hexdigest()
 
         return expected_proof == zk_proof
 
     @staticmethod
     def _static_hash_video_content(video_path):
-        """Static helper to hash video content."""
-        sha256 = hashlib.sha256()
-        try:
-            with open(video_path, 'rb') as f:
-                while True:
-                    data = f.read(65536)
-                    if not data:
-                        break
-                    sha256.update(data)
-            return sha256.hexdigest()
-        except FileNotFoundError:
-            return hashlib.sha256(b"MISSING_FILE").hexdigest()
+        """Static helper to hash video content using Merkle Tree."""
+        return MerkleTree(video_path).get_root()
 
     def check_liveness(self):
         """Simulates the Passive Liveness / Anti-Matrix Check.
