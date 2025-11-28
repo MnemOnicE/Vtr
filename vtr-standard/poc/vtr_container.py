@@ -4,11 +4,20 @@ import time
 import random
 
 class VTRContainer:
-    """
-    Mock implementation of the VTR Sidecar Generator.
+    """Mock implementation of the VTR Sidecar Generator.
+
     In production, this would run inside the TEE (Trusted Execution Environment).
+    It manages the creation of the VTR sidecar file, which contains cryptographic
+    proofs and metadata associated with a video file.
     """
+
     def __init__(self, raw_video_path, sensor_id_mock):
+        """Initializes the VTRContainer instance.
+
+        Args:
+            raw_video_path (str): The file path to the raw video content.
+            sensor_id_mock (str): The unique identifier for the simulated hardware sensor.
+        """
         self.video_path = raw_video_path
         # In reality, this sensor_id is never exposed to the OS.
         # It is accessed only via the Secure Enclave.
@@ -17,10 +26,13 @@ class VTRContainer:
         self.gps_salt = "34.0522,118.2437" # Mock GPS Block
 
     def _generate_zk_proof(self):
-        """
-        Simulates a Zero-Knowledge Proof.
+        """Simulates a Zero-Knowledge Proof.
+
         Combines Sensor ID + Timestamp + Video Hash + GPS Salt.
         The result proves the sensor signed it, without revealing the sensor ID.
+
+        Returns:
+            str: A simulated ZK-SNARK proof string.
         """
         # Hashing the video content (Simulated)
         video_hash = hashlib.sha256(f"VideoContent_{self.video_path}".encode()).hexdigest()
@@ -31,24 +43,45 @@ class VTRContainer:
         return f"zk_snark_{proof[:16]}"
 
     def _check_liveness(self):
-        """
-        Simulates Optical Flow / Passive Liveness Check.
-        Returns True if 3D Parallax and Focus Breathing are detected.
-        Returns False if Moiré patterns (screen recording) are detected.
+        """Simulates Optical Flow / Passive Liveness Check.
+
+        Checks for 3D Parallax and Focus Breathing to differentiate between a real
+        scene and a recording of a screen.
+
+        Returns:
+            bool: True if liveness check passes (3D parallax detected), False if
+                Moiré patterns (screen recording) are detected.
         """
         # Mock logic: Randomly pass for demo purposes
         liveness_score = random.uniform(0.8, 1.0)
         return liveness_score > 0.9
 
     def _calculate_semantic_entropy(self):
-        """
-        Simulates AI analysis of scene complexity.
+        """Simulates AI analysis of scene complexity.
+
         Higher score = More valuable data (Busy street vs Blank wall).
+
+        Returns:
+            float: A score representing the semantic entropy of the scene.
         """
         # Mock logic
         return 88.4
 
     def create_sidecar(self, allow_ai_training=False):
+        """Generates the .vtr sidecar JSON file.
+
+        This method creates a sidecar file that includes the VTR version,
+        hardware signature (including a simulated Zero-Knowledge Proof and liveness flag),
+        legal assertions, and economic data. The file is saved to disk with a
+        `.vtr.json` extension appended to the original video filename.
+
+        Args:
+            allow_ai_training (bool, optional): A flag indicating whether the content
+                may be used for AI training datasets. Defaults to False.
+
+        Returns:
+            None
+        """
         sidecar = {
             "vtr_version": "2.0",
             "hardware_signature": {
