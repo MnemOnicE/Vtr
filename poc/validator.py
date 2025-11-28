@@ -49,6 +49,12 @@ class VTRValidator:
                 error_code="VIDEO_NOT_FOUND",
                 message=f"Video file not found at: {video_path}"
             )
+        if not os.path.isfile(video_path):
+            return VerificationResult(
+                is_valid=False,
+                error_code="VIDEO_NOT_FOUND",
+                message=f"Video path is not a file: {video_path}"
+            )
         if not os.path.exists(sidecar_path):
             return VerificationResult(
                 is_valid=False,
