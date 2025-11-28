@@ -40,6 +40,7 @@ class VTRContainer:
         sidecar = {
             "vtr_version": "2.0",
             "hardware_signature": {
+                "public_key": self.prnu.get_public_key(),
                 "zk_proof": self.prnu.generate_zk_proof(self.video_path, self.timestamp),
                 "liveness_flag": self.prnu.check_liveness(),
                 "timestamp": self.timestamp
