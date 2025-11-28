@@ -3,15 +3,39 @@ import time
 from .mock_prnu import MockPRNU
 
 class VTRContainer:
+    """Manages the creation of Video Truth Record (VTR) containers.
+
+    This class handles the association of a raw video file with a hardware
+    root of trust, generating a sidecar file containing cryptographic proofs
+    and legal assertions.
+    """
+
     def __init__(self, raw_video_path, sensor_id_mock):
+        """Initializes the VTRContainer.
+
+        Args:
+            raw_video_path (str): The file path to the raw video content.
+            sensor_id_mock (str): The unique identifier for the simulated hardware sensor.
+        """
         self.video_path = raw_video_path
         self.timestamp = time.time()
         # Initialize the hardware root of trust
         self.prnu = MockPRNU(sensor_id_mock)
 
     def create_sidecar(self, allow_ai_training=False):
-        """
-        Generates the .vtr sidecar JSON with cryptographic proofs and legal assertions.
+        """Generates the .vtr sidecar JSON file.
+
+        This method creates a sidecar file that includes the VTR version,
+        hardware signature (including a simulated Zero-Knowledge Proof and liveness flag),
+        and legal assertions regarding AI training usage. The file is saved to disk
+        with a `.vtr.json` extension appended to the original video filename.
+
+        Args:
+            allow_ai_training (bool, optional): A flag indicating whether the content
+                may be used for AI training datasets. Defaults to False.
+
+        Returns:
+            None
         """
         sidecar = {
             "vtr_version": "2.0",
