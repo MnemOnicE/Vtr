@@ -1,0 +1,18 @@
+HARDWARE-GPL LICENSE (DRAFT)
+
+This software and associated documentation files (the "Software") are provided under the following conditions designed to ensure the open and interoperable nature of the Video Truth Record (.vtr) standard.
+
+1.  **Open Source:** You are free to copy, modify, and distribute this Software.
+
+2.  **The "Poison Pill" Anti-Forking Clause:**
+    Any entity verifying `.vtr` signatures or implementing the VTR standard MUST recognize ALL valid issuers that adhere to the technical specifications defined in the RFC documents.
+
+    Creation of a "walled garden" or exclusive verification system that rejects valid signatures from compliant hardware (e.g., restricting verification to specific device manufacturers) is a violation of this license.
+
+    If you distribute a modified version of this Software or a derivative work, you must license the entire work, as a whole, at no charge to all third parties under the terms of this License.
+
+3.  **Hardware Integrity:**
+    Implementations must respect the Hardware Root of Trust as defined in the specifications. Tampering with the PRNU verification logic to bypass hardware checks invalidates the license.
+
+4.  **No Warranty:**
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
