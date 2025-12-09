@@ -1,18 +1,26 @@
-HARDWARE-GPL LICENSE (DRAFT)
+# The Video Truth Record (.vtr) - Dual-Licensing Strategy
 
-This software and associated documentation files (the "Software") are provided under the following conditions designed to ensure the open and interoperable nature of the Video Truth Record (.vtr) standard.
+This repository utilizes a **Dual-Licensing Strategy** to differentiate between the written specification and the reference implementation code. This ensures the integrity of the standard while promoting an open, reciprocally-protected software ecosystem.
 
-1.  **Open Source:** You are free to copy, modify, and distribute this Software.
+## 1. Specification & Whitepaper (The "Idea")
+**License:** [Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0)](https://creativecommons.org/licenses/by-nd/4.0/)
 
-2.  **The "Poison Pill" Anti-Forking Clause:**
-    Any entity verifying `.vtr` signatures or implementing the VTR standard MUST recognize ALL valid issuers that adhere to the technical specifications defined in the RFC documents.
+All documents located in `vtr-standard/specs/` and `vtr-standard/whitepaper/` are licensed under CC BY-ND 4.0.
+*   **You may:** Share, copy, and redistribute the material in any medium.
+*   **You may NOT:** Distribute modified versions (derivatives) of these documents.
 
-    Creation of a "walled garden" or exclusive verification system that rejects valid signatures from compliant hardware (e.g., restricting verification to specific device manufacturers) is a violation of this license.
+This protects the **official definition** of the VTR standard from fragmentation.
 
-    If you distribute a modified version of this Software or a derivative work, you must license the entire work, as a whole, at no charge to all third parties under the terms of this License.
+## 2. Proof-of-Concept & Validator Code (The "Implementation")
+**License:** [VTR Public License (VTR-PL)](vtr-standard/poc/LICENSE)
 
-3.  **Hardware Integrity:**
-    Implementations must respect the Hardware Root of Trust as defined in the specifications. Tampering with the PRNU verification logic to bypass hardware checks invalidates the license.
+All source code located in `vtr-standard/poc/` is licensed under the **VTR Public License (VTR-PL)**.
+*   Based on **GNU AGPLv3** with **Commons Clause** and **Poison Pill** extensions.
+*   Designed to prevent "walled gardens" and purely commercial capture of the validation infrastructure.
+*   Requires strict reciprocity: modifications must be open-sourced under the same terms.
 
-4.  **No Warranty:**
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+## Summary
+*   **Read the docs?** You can share them, but don't change the standard's text.
+*   **Run the code?** You must stay open and interoperable.
+
+*See specific `LICENSE` files in subdirectories for full legal texts.*

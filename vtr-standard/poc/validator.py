@@ -1,3 +1,8 @@
+# Copyright (c) 2025 OntoLogics (Seth & Axion). All rights reserved.
+# Licensed under the VTR Public License (VTR-PL), Version 1.0 (the "License").
+# A copy of the License is available in the root/vtr-standard/poc/LICENSE file.
+# This code is distributed WITHOUT ANY WARRANTY.
+
 import json
 import os
 from dataclasses import dataclass, field
