@@ -79,22 +79,24 @@ class VTRValidator:
                 message=f"Could not read sidecar: {str(e)}"
             )
 
-        # 4. Schema Check (Basic)
-        required_keys = ["vtr_version", "hardware_signature", "legal_assertions"]
+        # 4. Schema Check (V2.0 Strictness)
+        # Added 'economic_data' to required top-level keys
+        required_keys = ["vtr_version", "hardware_signature", "legal_assertions", "economic_data"]
         if not all(key in sidecar_data for key in required_keys):
              return VerificationResult(
                 is_valid=False,
                 error_code="INVALID_SCHEMA",
-                message="Sidecar missing top-level keys."
+                message="Sidecar missing top-level keys (V2.0 requires economic_data)."
             )
 
         hw_sig = sidecar_data.get("hardware_signature", {})
-        required_sig_keys = ["public_key", "zk_proof", "timestamp", "liveness_flag"]
+        # Added 'location_block_hash' to required hardware_signature keys
+        required_sig_keys = ["public_key", "zk_proof", "timestamp", "liveness_flag", "location_block_hash"]
         if not all(key in hw_sig for key in required_sig_keys):
              return VerificationResult(
                 is_valid=False,
                 error_code="INVALID_SCHEMA",
-                message="Hardware signature block missing required keys."
+                message="Hardware signature block missing required keys (V2.0 requires location_block_hash)."
             )
 
         # 5. Cryptographic Verification
