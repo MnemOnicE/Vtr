@@ -9,10 +9,6 @@ class MerkleTree:
     def __init__(self, file_path: str, chunk_size: int = 1024 * 1024):
         """
         Initialize the Merkle Tree by reading the file and computing the root.
-
-        Args:
-            file_path (str): Path to the file to hash.
-            chunk_size (int): Size of chunks in bytes (default 1MB).
         """
         self.file_path = file_path
         self.chunk_size = chunk_size
@@ -30,11 +26,8 @@ class MerkleTree:
                         break
                     hashes.append(hashlib.sha256(chunk).hexdigest())
         except FileNotFoundError:
-            # Consistent with existing MockPRNU behavior for missing files, though
-            # ideally this should raise. We will return an empty list or specific hash.
             return [hashlib.sha256(b"MISSING_FILE").hexdigest()]
 
-        # Handle empty file case
         if not hashes:
             return [hashlib.sha256(b"").hexdigest()]
 
@@ -54,8 +47,6 @@ class MerkleTree:
                 node2 = leaves[i+1]
                 combined = node1 + node2
             else:
-                # If odd number of nodes, duplicate the last one (common convention)
-                # or just hash it with itself. Let's duplicate to keep tree balanced-ish.
                 combined = node1 + node1
 
             parents.append(hashlib.sha256(combined.encode()).hexdigest())
