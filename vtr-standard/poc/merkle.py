@@ -23,15 +23,12 @@ class MerkleTree:
     def _compute_leaves(self) -> List[str]:
         """Reads the file in chunks and computes SHA256 hash for each chunk."""
         hashes = []
-        try:
-            with open(self.file_path, 'rb') as f:
-                while True:
-                    chunk = f.read(self.chunk_size)
-                    if not chunk:
-                        break
-                    hashes.append(hashlib.sha256(chunk).hexdigest())
-        except FileNotFoundError:
-            return [hashlib.sha256(b"MISSING_FILE").hexdigest()]
+        with open(self.file_path, 'rb') as f:
+            while True:
+                chunk = f.read(self.chunk_size)
+                if not chunk:
+                    break
+                hashes.append(hashlib.sha256(chunk).hexdigest())
 
         if not hashes:
             return [hashlib.sha256(b"").hexdigest()]
