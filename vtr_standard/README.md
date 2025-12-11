@@ -28,11 +28,17 @@ The Video Truth Record is a new open standard that inverts the model. Instead of
 
 ### Prerequisites
 
-*   Python 3.6 or higher.
+*   Python 3.8 or higher.
 
 ### Installation
 
-No external dependencies are required for the Proof of Concept (POC) as it uses the Python standard library.
+From the root of the repository, run:
+
+```bash
+pip install .
+```
+
+This will install the `vtr_standard` package and its dependencies (e.g., `pydantic`).
 
 ## Usage
 
@@ -65,14 +71,6 @@ This checks:
 1.  **File Integrity:** Merkle Tree hashing of the video content.
 2.  **Signature Validity:** Cryptographic verification of the ZK proof.
 3.  **Schema Compliance:** Ensures the sidecar matches V2.0 specs.
-
-### Legacy Demo
-
-To run the automated internal demo script:
-
-```bash
-python3 -m vtr_standard.poc.vtr_container
-```
 
 ## License
 
