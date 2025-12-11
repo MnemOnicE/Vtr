@@ -7,7 +7,9 @@ import json
 import os
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
+from pydantic import ValidationError
 from .mock_prnu import MockPRNU
+from .schemas import VTRSidecar
 
 @dataclass
 class VerificationResult:
@@ -67,15 +69,27 @@ class VTRValidator:
                 message=f"Sidecar file not found at: {sidecar_path}"
             )
 
-        # 3. Load and Parse Sidecar
+        # 3. Load and Parse Sidecar with Pydantic
         try:
             with open(sidecar_path, 'r') as f:
-                sidecar_data = json.load(f)
+                raw_data = json.load(f)
+
+            # Validate Schema
+            sidecar = VTRSidecar.model_validate(raw_data)
+
         except json.JSONDecodeError:
             return VerificationResult(
                 is_valid=False,
                 error_code="INVALID_JSON",
                 message="Sidecar file contains invalid JSON."
+            )
+        except ValidationError as e:
+            # Pydantic validation failed
+            return VerificationResult(
+                is_valid=False,
+                error_code="INVALID_SCHEMA",
+                message=f"Schema validation failed: {e}",
+                details={"validation_errors": e.errors()}
             )
         except Exception as e:
             return VerificationResult(
@@ -84,37 +98,16 @@ class VTRValidator:
                 message=f"Could not read sidecar: {str(e)}"
             )
 
-        # 4. Schema Check (V2.0 Strictness)
-        # Added 'economic_data' to required top-level keys
-        required_keys = ["vtr_version", "hardware_signature", "legal_assertions", "economic_data"]
-        if not all(key in sidecar_data for key in required_keys):
-             return VerificationResult(
-                is_valid=False,
-                error_code="INVALID_SCHEMA",
-                message="Sidecar missing top-level keys (V2.0 requires economic_data)."
-            )
+        # 4. Cryptographic Verification
+        # Extract data from the validated model
+        hw_sig = sidecar.hardware_signature
 
-        hw_sig = sidecar_data.get("hardware_signature", {})
-        # Added 'location_block_hash' to required hardware_signature keys
-        required_sig_keys = ["public_key", "zk_proof", "timestamp", "liveness_flag", "location_block_hash"]
-        if not all(key in hw_sig for key in required_sig_keys):
-             return VerificationResult(
-                is_valid=False,
-                error_code="INVALID_SCHEMA",
-                message="Hardware signature block missing required keys (V2.0 requires location_block_hash)."
-            )
-
-        # 5. Cryptographic Verification
-        # Extract data
-        public_key = hw_sig["public_key"]
-        zk_proof = hw_sig["zk_proof"]
-        timestamp = hw_sig["timestamp"]
-        # Extract optional Chain of Custody link
-        previous_signature = hw_sig.get("previous_signature_link")
+        public_key = hw_sig.public_key
+        zk_proof = hw_sig.zk_proof
+        timestamp = hw_sig.timestamp
+        previous_signature = hw_sig.previous_signature_link
 
         # Verify using MockPRNU static method
-        # This re-hashes the video content (via Merkle Tree) and checks if it matches the proof signed by the public key
-        # We pass previous_signature to include it in the hash reconstruction if present
         is_signature_valid = MockPRNU.verify_zk_proof(
             public_key=public_key,
             video_path=video_path,
@@ -124,12 +117,11 @@ class VTRValidator:
         )
 
         if is_signature_valid:
-            # Additional check: Verify the Merkle Root matches the one in sidecar if present
-            # This is a secondary integrity check, although cryptographic signature is the primary one.
-            sidecar_merkle_root = hw_sig.get("merkle_root")
+            # Additional check: Verify the Merkle Root matches the one in sidecar
+            sidecar_merkle_root = hw_sig.merkle_root
             actual_merkle_root = MockPRNU._static_hash_video_content(video_path)
 
-            if sidecar_merkle_root and sidecar_merkle_root != actual_merkle_root:
+            if sidecar_merkle_root != actual_merkle_root:
                 return VerificationResult(
                     is_valid=False,
                     error_code="MERKLE_MISMATCH",
@@ -141,9 +133,9 @@ class VTRValidator:
                 )
 
             details = {
-                    "vtr_version": sidecar_data["vtr_version"],
+                    "vtr_version": sidecar.vtr_version,
                     "timestamp": timestamp,
-                    "liveness": hw_sig["liveness_flag"],
+                    "liveness": hw_sig.liveness_flag,
                     "merkle_root": actual_merkle_root
             }
             if previous_signature:

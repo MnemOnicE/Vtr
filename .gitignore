@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 *.vtr.json
 *.DS_Store
+build/
+dist/
+*.egg-info/

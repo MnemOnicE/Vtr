@@ -25,73 +25,74 @@ The **Video Truth Record (.vtr)** is an open standard for **Hardware-Signed Medi
 
 The repository is organized as follows:
 
-*   `/vtr-standard`: The main project directory containing the standard definitions and reference implementation.
+*   `/vtr_standard`: The main project directory containing the standard definitions and reference implementation.
     *   `/whitepaper`: The full "Seth Protocol" master plan and economic model.
     *   `/specs`: The technical Request For Comments (RFC) documents defining the standard.
     *   `/poc`: Python proof-of-concept for the metadata container and verification logic (Reference Implementation).
     *   `/docs`: Documentation files.
-*   `/poc`: A standalone Proof of Concept implementation (simplified).
 
 ## Installation & Setup
 
 ### Prerequisites
 
-*   Python 3.6 or higher.
+*   Python 3.8 or higher.
 
 ### Installation
 
-Clone the repository:
+Clone the repository and install the package:
 
 ```bash
-git clone https://github.com/yourusername/vtr-project.git
-cd vtr-project
+git clone https://github.com/ontologics/vtr-standard.git
+cd vtr-standard
+pip install .
 ```
 
-No external dependencies are required for the Proof of Concept (POC) as it uses the Python standard library.
+This will install the required dependencies (including `pydantic`).
 
 ## Usage Guide
 
-You can run the Proof of Concept using either the standalone script or the package within `vtr-standard`.
+### Running the CLI
 
-### Running the Standalone POC
+The Proof of Concept provides a Command Line Interface (CLI) to sign and verify video files.
 
-To run the simplified proof-of-concept script:
+> **⚠️ WARNING:** The POC runs in **Mock Sensor Mode**. It uses simulated hardware roots of trust and is for demonstration purposes only.
 
-```bash
-python3 -m poc.vtr_container
-```
+#### Sign a Video
 
-### Running the Standard Reference POC
-
-To run the reference implementation in `vtr-standard`:
+Generate a VTR sidecar (`.vtr.json`) for a video file:
 
 ```bash
-python3 -m vtr-standard.poc.vtr_container
+python3 -m vtr_standard.poc.cli sign my_video.mp4
 ```
 
-### Output
+Options:
+*   `--sensor-id <ID>`: Simulate a specific sensor ID (e.g., `DEVICE_123`).
+*   `--allow-ai`: Flag to allow your data to be used for AI training.
+*   `--link-to <PATH>`: Path to a previous sidecar to create a "Chain of Custody" link.
 
-The script will generate a `.vtr.json` sidecar file (e.g., `protest_footage.mp4.vtr.json`) in the same directory. This file contains:
+#### Verify a Video
 
-*   **vtr_version**: The version of the VTR standard used.
-*   **hardware_signature**:
-    *   `zk_proof`: A simulated Zero-Knowledge Proof hash.
-    *   `liveness_flag`: Result of the liveness check.
-    *   `timestamp`: Time of capture.
-*   **legal_assertions**:
-    *   `x_vtr_ai_training`: Boolean flag for AI training consent.
-    *   `note`: Legal note regarding data usage.
+Verify the integrity and authenticity of a VTR container:
+
+```bash
+python3 -m vtr_standard.poc.cli verify my_video.mp4
+```
+
+This checks:
+1.  **File Integrity:** Merkle Tree hashing of the video content.
+2.  **Signature Validity:** Cryptographic verification of the ZK proof.
+3.  **Schema Compliance:** Ensures the sidecar matches V2.0 specs.
 
 ## API Documentation
 
-### `poc.vtr_container`
+### `vtr_standard.poc.vtr_container`
 
 Main module for handling VTR containers.
 
 *   `VTRContainer`: Class to manage video and sensor association.
     *   `create_sidecar(allow_ai_training=False)`: Generates the JSON sidecar.
 
-### `poc.mock_prnu`
+### `vtr_standard.poc.mock_prnu`
 
 Module for simulating hardware sensor logic.
 
@@ -107,4 +108,4 @@ This is an open standard. We welcome contributions from engineers, cryptographer
 
 ## License
 
-This project uses a custom 'Hardware-GPL' license. Please refer to the license file for details.
+This project is licensed under the **VTR Public License (VTR-PL)**, a reciprocal license designed to protect the integrity of human-generated media. See `LICENSE` for details.
