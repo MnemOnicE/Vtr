@@ -36,26 +36,43 @@ No external dependencies are required for the Proof of Concept (POC) as it uses 
 
 ## Usage
 
-The Proof of Concept (POC) demonstrates how to generate a VTR sidecar file for a video.
+The Proof of Concept (POC) provides a Command Line Interface (CLI) to sign and verify video files.
 
-Run the Proof of Concept generator:
+> **⚠️ WARNING:** The POC runs in **Mock Sensor Mode**. It uses simulated hardware roots of trust and is for demonstration purposes only.
+
+### Sign a Video
+
+Generate a VTR sidecar (`.vtr.json`) for a video file:
 
 ```bash
-python3 -m vtr-standard.poc.vtr_container
+python3 -m vtr_standard.poc.cli sign my_video.mp4
 ```
 
-This will produce a `.vtr.json` file (e.g., `protest_footage.mp4.vtr.json`) containing the simulated cryptographic proofs.
+Options:
+*   `--sensor-id <ID>`: Simulate a specific sensor ID (e.g., `DEVICE_123`).
+*   `--allow-ai`: Flag to allow your data to be used for AI training.
+*   `--link-to <PATH>`: Path to a previous sidecar to create a "Chain of Custody" link.
 
-### API Reference
+### Verify a Video
 
-#### `vtr_standard.poc.vtr_container`
+Verify the integrity and authenticity of a VTR container:
 
-Main module for handling VTR containers.
+```bash
+python3 -m vtr_standard.poc.cli verify my_video.mp4
+```
 
-*   `VTRContainer`: Class to manage video and sensor association.
-    *   `create_sidecar(allow_ai_training=False)`: Generates the JSON sidecar.
-    *   `_generate_zk_proof()`: (Internal) Simulates ZK proof generation.
-    *   `_check_liveness()`: (Internal) Simulates liveness checks.
+This checks:
+1.  **File Integrity:** Merkle Tree hashing of the video content.
+2.  **Signature Validity:** Cryptographic verification of the ZK proof.
+3.  **Schema Compliance:** Ensures the sidecar matches V2.0 specs.
+
+### Legacy Demo
+
+To run the automated internal demo script:
+
+```bash
+python3 -m vtr_standard.poc.vtr_container
+```
 
 ## License
 

@@ -26,7 +26,7 @@ class TestMerkleFix(unittest.TestCase):
 
         # Run the module
         result = subprocess.run(
-            [sys.executable, "-m", "vtr-standard.poc.vtr_container"],
+            [sys.executable, "-m", "vtr_standard.poc.vtr_container"],
             capture_output=True,
             text=True,
             cwd=os.getcwd() # Run from root
@@ -47,7 +47,7 @@ class TestMerkleFix(unittest.TestCase):
         try:
             # Run the module
             result = subprocess.run(
-                [sys.executable, "-m", "vtr-standard.poc.vtr_container"],
+                [sys.executable, "-m", "vtr_standard.poc.vtr_container"],
                 capture_output=True,
                 text=True,
                 cwd=os.getcwd()
