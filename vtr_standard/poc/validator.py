@@ -106,6 +106,8 @@ class VTRValidator:
         zk_proof = hw_sig.zk_proof
         timestamp = hw_sig.timestamp
         previous_signature = hw_sig.previous_signature_link
+        liveness_flag = hw_sig.liveness_flag
+        location_block_hash = hw_sig.location_block_hash
 
         # Verify using MockPRNU static method
         is_signature_valid = MockPRNU.verify_zk_proof(
@@ -113,6 +115,8 @@ class VTRValidator:
             video_path=video_path,
             timestamp=timestamp,
             zk_proof=zk_proof,
+            liveness_flag=liveness_flag,
+            location_block_hash=location_block_hash,
             previous_signature=previous_signature
         )
 
@@ -132,10 +136,19 @@ class VTRValidator:
                     }
                 )
 
+            # Strict Liveness Check (Security Feature)
+            if not liveness_flag:
+                 return VerificationResult(
+                    is_valid=False,
+                    error_code="LIVENESS_FAILURE",
+                    message="Hardware liveness check failed. This content is flagged as potentially synthetic.",
+                    details={"liveness_flag": False}
+                )
+
             details = {
                     "vtr_version": sidecar.vtr_version,
                     "timestamp": timestamp,
-                    "liveness": hw_sig.liveness_flag,
+                    "liveness": liveness_flag,
                     "merkle_root": actual_merkle_root
             }
             if previous_signature:

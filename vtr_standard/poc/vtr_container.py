@@ -6,8 +6,12 @@
 import json
 import time
 import os
+import logging
 from .mock_prnu import MockPRNU
 from .schemas import VTRSidecar, HardwareSignature, LegalAssertions
+
+# Configure module-level logger
+logger = logging.getLogger(__name__)
 
 class VTRContainer:
     """Manages the creation of Video Truth Record (VTR) containers.
@@ -51,24 +55,30 @@ class VTRContainer:
                 previous_signature = prev_data.get("hardware_signature", {}).get("zk_proof")
 
                 if not previous_signature:
-                    print(f"⚠️ Warning: Could not extract zk_proof from {previous_sidecar_path}")
+                    logger.warning(f"Could not extract zk_proof from {previous_sidecar_path}")
             except Exception as e:
-                print(f"⚠️ Warning: Failed to read previous sidecar: {e}")
+                logger.warning(f"Failed to read previous sidecar: {e}")
 
         # --- 1. Hardware Signature Components ---
+        # Calculate liveness and location first to bind them in the proof
+        liveness_flag = self.prnu.check_liveness()
+        location_block_hash = self.prnu.calculate_location_block_hash()
+
         zk_proof = self.prnu.generate_zk_proof(
             self.video_path,
             self.timestamp,
+            liveness_flag=liveness_flag,
+            location_block_hash=location_block_hash,
             previous_signature=previous_signature
         )
 
         hardware_signature = HardwareSignature(
             public_key=self.prnu.get_public_key(),
             zk_proof=zk_proof,
-            liveness_flag=self.prnu.check_liveness(),
+            liveness_flag=liveness_flag,
             timestamp=self.timestamp,
             merkle_root=self.prnu._hash_video_content(self.video_path),
-            location_block_hash=self.prnu.calculate_location_block_hash(),
+            location_block_hash=location_block_hash,
             previous_signature_link=previous_signature
         )
 
@@ -90,11 +100,13 @@ class VTRContainer:
         with open(filename, 'w') as f:
             f.write(sidecar.model_dump_json(indent=4))
 
-        print(f"✅ VTR Sidecar created: {filename}")
-        print(f"🔒 AI Training Permission: {allow_ai_training}")
+        logger.info(f"✅ VTR Sidecar created: {filename}")
+        logger.info(f"🔒 AI Training Permission: {allow_ai_training}")
 
 if __name__ == "__main__":
-    print("--- OntoLogics VTR Generator v2.0 (Merged POC) ---")
+    import sys
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='%(message)s')
+    logger.info("--- OntoLogics VTR Generator v2.0 (Merged POC) ---")
 
     # Simulate a "Potato Phone" capturing a video (First Link in the Chain)
     camera_1 = VTRContainer("first_video.mp4", sensor_id_mock="SENSOR_PRNU_XYZ_999")
