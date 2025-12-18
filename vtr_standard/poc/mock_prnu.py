@@ -6,6 +6,7 @@
 import hashlib
 import time
 import random
+import os
 from .merkle import MerkleTree
 
 class MockPRNU:
@@ -18,8 +19,9 @@ class MockPRNU:
     def __init__(self, sensor_id):
         """Initializes the MockPRNU instance."""
         self.sensor_id = sensor_id
-        # Mock GPS Block used for location hashing
-        self.gps_salt = "34.0522,118.2437"
+        # Mock GPS Block used for location hashing.
+        # Check env var for deterministic override: VTR_TEST_GPS
+        self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
 
     def get_public_key(self):
         """Derives a simulated Public Verification Key from the sensor ID."""
@@ -29,10 +31,11 @@ class MockPRNU:
         """Calculates the Merkle Root of the video file content."""
         return MockPRNU._static_hash_video_content(video_path)
 
-    def generate_zk_proof(self, video_path, timestamp, previous_signature=None):
+    def generate_zk_proof(self, video_path, timestamp, liveness_flag, location_block_hash, previous_signature=None):
         """Simulates generating a Zero-Knowledge Proof (ZKP) for V2.0.
 
-        Binds the Verification Key, Merkle Root, Timestamp, and optional Chain-of-Custody link.
+        Binds the Verification Key, Merkle Root, Timestamp, Liveness, Location,
+        and optional Chain-of-Custody link.
         """
         # 1. Calculate Hash of the actual Video Content (Merkle Root)
         video_hash = self._hash_video_content(video_path)
@@ -40,8 +43,9 @@ class MockPRNU:
         # 2. Derive the Public Verification Key
         verification_key = self.get_public_key()
 
-        # 3. Create the Proof (Signs Key + Timestamp + Video Hash + Previous Signature)
-        data_to_sign = f"{verification_key}{timestamp}{video_hash}"
+        # 3. Create the Proof (Signs Key + Timestamp + Video Hash + Liveness + Location + Previous Signature)
+        # We cast liveness_flag (bool) to str explicitly for consistent hashing.
+        data_to_sign = f"{verification_key}{timestamp}{video_hash}{str(liveness_flag)}{location_block_hash}"
 
         if previous_signature:
             data_to_sign += previous_signature
@@ -51,7 +55,15 @@ class MockPRNU:
         return f"zk_snark_{proof_hash[:16]}"
 
     def check_liveness(self):
-        """Simulates the Passive Liveness / Anti-Matrix Check."""
+        """Simulates the Passive Liveness / Anti-Matrix Check.
+
+        Now supports deterministic control via VTR_TEST_LIVENESS env var.
+        """
+        env_liveness = os.environ.get("VTR_TEST_LIVENESS")
+        if env_liveness is not None:
+            # Accepts "true", "1", "pass" as True; anything else as False (if set)
+            return env_liveness.lower() in ("true", "1", "pass")
+
         # Mock logic: Randomly pass for demo purposes
         liveness_score = random.uniform(0.8, 1.0)
         return liveness_score > 0.9
@@ -62,6 +74,12 @@ class MockPRNU:
 
     def _calculate_semantic_score(self):
         """Simulates AI analysis of scene complexity for economic data."""
+        env_score = os.environ.get("VTR_TEST_SEMANTIC_SCORE")
+        if env_score is not None:
+            try:
+                return float(env_score)
+            except ValueError:
+                pass # Fallback to default if invalid
         return 88.4
 
     def get_economic_data(self):
@@ -77,12 +95,16 @@ class MockPRNU:
         return MerkleTree(video_path).get_root()
 
     @staticmethod
-    def verify_zk_proof(public_key, video_path, timestamp, zk_proof, previous_signature=None):
-        """Verifies a simulated Zero-Knowledge Proof."""
+    def verify_zk_proof(public_key, video_path, timestamp, zk_proof, liveness_flag, location_block_hash, previous_signature=None):
+        """Verifies a simulated Zero-Knowledge Proof.
+
+        Now requires liveness_flag and location_block_hash to reconstruct the hash.
+        """
 
         video_hash = MockPRNU._static_hash_video_content(video_path)
 
-        expected_data = f"{public_key}{timestamp}{video_hash}"
+        # Must match the order in generate_zk_proof
+        expected_data = f"{public_key}{timestamp}{video_hash}{str(liveness_flag)}{location_block_hash}"
 
         if previous_signature:
             expected_data += previous_signature
