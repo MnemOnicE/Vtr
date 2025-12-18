@@ -7,26 +7,42 @@ import argparse
 import sys
 import json
 import os
+import logging
 from .vtr_container import VTRContainer
 from .validator import VTRValidator
 
+# Configure Logging
+logger = logging.getLogger("vtr")
+
+def setup_logging():
+    """Configures the logging format and level."""
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(message)s')  # Simple format for CLI user friendliness
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
 def print_banner():
-    """Prints the VTR warning banner."""
-    print("\n" + "="*60)
-    print("🎥  ONTOLOGICS VIDEO TRUTH RECORD (VTR) - POC TOOL  🎥")
-    print("="*60)
-    print("⚠️  WARNING: RUNNING IN MOCK SENSOR MODE")
-    print("    This tool uses simulated hardware roots of trust.")
-    print("    DO NOT USE FOR ACTUAL EVIDENTIARY PURPOSES.")
-    print("="*60 + "\n")
+    """Logs the VTR warning banner."""
+    banner = (
+        "\n" + "="*60 + "\n" +
+        "🎥  ONTOLOGICS VIDEO TRUTH RECORD (VTR) - POC TOOL  🎥\n" +
+        "="*60 + "\n" +
+        "⚠️  WARNING: RUNNING IN MOCK SENSOR MODE\n" +
+        "    This tool uses simulated hardware roots of trust.\n" +
+        "    DO NOT USE FOR ACTUAL EVIDENTIARY PURPOSES.\n" +
+        "="*60 + "\n"
+    )
+    logger.warning(banner)
 
 def cmd_sign(args):
     """Handles the 'sign' command."""
-    print(f"🔄  Processing video: {args.video_path}")
+    logger.info(f"🔄  Processing video: {args.video_path}")
     if args.sensor_id:
-        print(f"🆔  Using Custom Sensor ID: {args.sensor_id}")
+        logger.info(f"🆔  Using Custom Sensor ID: {args.sensor_id}")
     else:
-        print("🆔  Using Default Mock Sensor ID")
+        logger.info("🆔  Using Default Mock Sensor ID")
 
     # Initialize Container
     # Using a default sensor ID if not provided, or the one from args
@@ -43,35 +59,36 @@ def cmd_sign(args):
             previous_sidecar_path=prev_sidecar
         )
     except FileNotFoundError:
-        print(f"❌  Error: Video file '{args.video_path}' not found.")
+        logger.error(f"❌  Error: Video file '{args.video_path}' not found.")
         sys.exit(1)
     except Exception as e:
-        print(f"❌  An unexpected error occurred: {e}")
+        logger.error(f"❌  An unexpected error occurred: {e}")
         sys.exit(1)
 
 def cmd_verify(args):
     """Handles the 'verify' command."""
-    print(f"🔍  Verifying: {args.video_path}")
+    logger.info(f"🔍  Verifying: {args.video_path}")
 
     validator = VTRValidator()
     result = validator.validate_container(args.video_path, args.sidecar)
 
     if result.is_valid:
-        print("\n✅  VERIFICATION SUCCESSFUL")
-        print("    The video content matches the hardware signature.")
-        print("-" * 40)
+        logger.info("\n✅  VERIFICATION SUCCESSFUL")
+        logger.info("    The video content matches the hardware signature.")
+        logger.info("-" * 40)
         for key, value in result.details.items():
-            print(f"    {key}: {value}")
-        print("-" * 40)
+            logger.info(f"    {key}: {value}")
+        logger.info("-" * 40)
     else:
-        print("\n❌  VERIFICATION FAILED")
-        print(f"    Error Code: {result.error_code}")
-        print(f"    Message:    {result.message}")
+        logger.error("\n❌  VERIFICATION FAILED")
+        logger.error(f"    Error Code: {result.error_code}")
+        logger.error(f"    Message:    {result.message}")
         if result.details:
-            print(f"    Details:    {json.dumps(result.details, indent=4)}")
+            logger.error(f"    Details:    {json.dumps(result.details, indent=4)}")
         sys.exit(1)
 
 def main():
+    setup_logging()
     parser = argparse.ArgumentParser(description="VTR Proof of Concept CLI")
     subparsers = parser.add_subparsers(dest="command", required=True, help="Available commands")
 
