@@ -108,6 +108,7 @@ class VTRValidator:
         previous_signature = hw_sig.previous_signature_link
         liveness_flag = hw_sig.liveness_flag
         location_block_hash = hw_sig.location_block_hash
+        nonce = hw_sig.nonce
 
         # Verify using MockPRNU static method
         is_signature_valid = MockPRNU.verify_zk_proof(
@@ -117,6 +118,7 @@ class VTRValidator:
             zk_proof=zk_proof,
             liveness_flag=liveness_flag,
             location_block_hash=location_block_hash,
+            nonce=nonce,
             previous_signature=previous_signature
         )
 

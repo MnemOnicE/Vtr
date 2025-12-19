@@ -7,6 +7,7 @@ import json
 import time
 import os
 import logging
+import uuid
 from .mock_prnu import MockPRNU
 from .schemas import VTRSidecar, HardwareSignature, LegalAssertions
 
@@ -64,11 +65,15 @@ class VTRContainer:
         liveness_flag = self.prnu.check_liveness()
         location_block_hash = self.prnu.calculate_location_block_hash()
 
+        # Generate Nonce for Replay Protection
+        nonce = uuid.uuid4().hex
+
         zk_proof = self.prnu.generate_zk_proof(
             self.video_path,
             self.timestamp,
             liveness_flag=liveness_flag,
             location_block_hash=location_block_hash,
+            nonce=nonce,
             previous_signature=previous_signature
         )
 
@@ -79,7 +84,8 @@ class VTRContainer:
             timestamp=self.timestamp,
             merkle_root=self.prnu._hash_video_content(self.video_path),
             location_block_hash=location_block_hash,
-            previous_signature_link=previous_signature
+            previous_signature_link=previous_signature,
+            nonce=nonce
         )
 
         # --- 2. Construct Final Sidecar ---

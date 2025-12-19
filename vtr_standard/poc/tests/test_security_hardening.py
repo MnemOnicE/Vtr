@@ -93,6 +93,33 @@ class TestSecurityHardening(unittest.TestCase):
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "INVALID_SIGNATURE")
 
+    def test_replay_protection_nonce(self):
+        """Test that modifying the nonce invalidates the signature."""
+        # 1. Sign
+        os.environ["VTR_TEST_LIVENESS"] = "true"
+        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST")
+        container.create_sidecar()
+
+        # 2. Tamper: Change Nonce
+        with open(self.SIDECAR_PATH, 'r') as f:
+            data = json.load(f)
+
+        # Sanity check: nonce exists
+        self.assertIn("nonce", data["hardware_signature"])
+
+        # Modify nonce
+        data["hardware_signature"]["nonce"] = "modified_nonce_123"
+
+        with open(self.SIDECAR_PATH, 'w') as f:
+            json.dump(data, f)
+
+        # 3. Verify
+        validator = VTRValidator()
+        result = validator.validate_container(self.VIDEO_PATH)
+
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, "INVALID_SIGNATURE")
+
     def test_success_path(self):
         """Test normal success path."""
         os.environ["VTR_TEST_LIVENESS"] = "true"
