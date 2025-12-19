@@ -31,11 +31,11 @@ class MockPRNU:
         """Calculates the Merkle Root of the video file content."""
         return MockPRNU._static_hash_video_content(video_path)
 
-    def generate_zk_proof(self, video_path, timestamp, liveness_flag, location_block_hash, previous_signature=None):
+    def generate_zk_proof(self, video_path, timestamp, liveness_flag, location_block_hash, nonce, previous_signature=None):
         """Simulates generating a Zero-Knowledge Proof (ZKP) for V2.0.
 
         Binds the Verification Key, Merkle Root, Timestamp, Liveness, Location,
-        and optional Chain-of-Custody link.
+        Nonce (Replay Protection), and optional Chain-of-Custody link.
         """
         # 1. Calculate Hash of the actual Video Content (Merkle Root)
         video_hash = self._hash_video_content(video_path)
@@ -43,9 +43,9 @@ class MockPRNU:
         # 2. Derive the Public Verification Key
         verification_key = self.get_public_key()
 
-        # 3. Create the Proof (Signs Key + Timestamp + Video Hash + Liveness + Location + Previous Signature)
+        # 3. Create the Proof (Signs Key + Timestamp + Video Hash + Liveness + Location + Nonce + Previous Signature)
         # We cast liveness_flag (bool) to str explicitly for consistent hashing.
-        data_to_sign = f"{verification_key}{timestamp}{video_hash}{str(liveness_flag)}{location_block_hash}"
+        data_to_sign = f"{verification_key}{timestamp}{video_hash}{str(liveness_flag)}{location_block_hash}{nonce}"
 
         if previous_signature:
             data_to_sign += previous_signature
@@ -95,16 +95,16 @@ class MockPRNU:
         return MerkleTree(video_path).get_root()
 
     @staticmethod
-    def verify_zk_proof(public_key, video_path, timestamp, zk_proof, liveness_flag, location_block_hash, previous_signature=None):
+    def verify_zk_proof(public_key, video_path, timestamp, zk_proof, liveness_flag, location_block_hash, nonce, previous_signature=None):
         """Verifies a simulated Zero-Knowledge Proof.
 
-        Now requires liveness_flag and location_block_hash to reconstruct the hash.
+        Now requires liveness_flag, location_block_hash, and nonce to reconstruct the hash.
         """
 
         video_hash = MockPRNU._static_hash_video_content(video_path)
 
         # Must match the order in generate_zk_proof
-        expected_data = f"{public_key}{timestamp}{video_hash}{str(liveness_flag)}{location_block_hash}"
+        expected_data = f"{public_key}{timestamp}{video_hash}{str(liveness_flag)}{location_block_hash}{nonce}"
 
         if previous_signature:
             expected_data += previous_signature

@@ -17,6 +17,7 @@ class HardwareSignature(BaseModel):
     merkle_root: str = Field(..., description="The Merkle Tree Root of the video content.")
     location_block_hash: str = Field(..., description="Hash of the location data block.")
     previous_signature_link: Optional[str] = Field(None, description="The zk_proof of the previous VTR sidecar in the chain.")
+    nonce: str = Field(..., description="A unique value to prevent economic replay attacks.")
 
 class LegalAssertions(BaseModel):
     """
