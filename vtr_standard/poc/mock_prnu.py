@@ -19,6 +19,14 @@ class MockPRNU:
     def __init__(self, sensor_id):
         """Initializes the MockPRNU instance."""
         self.sensor_id = sensor_id
+
+        # SECURITY PATCH: Fail if running in PRODUCTION mode
+        if os.environ.get("VTR_ENV") == "PRODUCTION":
+            raise RuntimeError(
+                "CRITICAL SECURITY VIOLATION: MockPRNU loaded in PRODUCTION environment. "
+                "This module is for testing only. Use RealPRNU interface."
+            )
+
         # Mock GPS Block used for location hashing.
         # Check env var for deterministic override: VTR_TEST_GPS
         self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
@@ -45,7 +53,7 @@ class MockPRNU:
 
         # 3. Create the Proof (Signs Key + Timestamp + Video Hash + Liveness + Location + Nonce + Previous Signature)
         # We cast liveness_flag (bool) to str explicitly for consistent hashing.
-        data_to_sign = f"{verification_key}{timestamp}{video_hash}{str(liveness_flag)}{location_block_hash}{nonce}"
+        data_to_sign = f"{verification_key}{timestamp}{video_hash}{str(liveness_flag).lower()}{location_block_hash}{nonce}"
 
         if previous_signature:
             data_to_sign += previous_signature
@@ -104,7 +112,7 @@ class MockPRNU:
         video_hash = MockPRNU._static_hash_video_content(video_path)
 
         # Must match the order in generate_zk_proof
-        expected_data = f"{public_key}{timestamp}{video_hash}{str(liveness_flag)}{location_block_hash}{nonce}"
+        expected_data = f"{public_key}{timestamp}{video_hash}{str(liveness_flag).lower()}{location_block_hash}{nonce}"
 
         if previous_signature:
             expected_data += previous_signature
