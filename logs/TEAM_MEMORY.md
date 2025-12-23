@@ -4,5 +4,5 @@
 High Stakes / Integrity Critical (Security > Privacy > Economics)
 
 ## Agent Reflections (Latest)
-* **Sentinel:** Enforced hierarchy: Economics must never compromise the Hardware Root of Trust.
-* **Red Team:** Identified critical Sybil attack vector in `semantic_score` and latency bottleneck in `get_economic_data()`.
+* **Scribe:** Roadmap was desynchronized from code (Operation Hard Truth was finished but unmarked). Fixed.
+* **Sentinel:** Mandated that `wallet_address` must be optional to preserve the 'Privacy' value in the hierarchy.
