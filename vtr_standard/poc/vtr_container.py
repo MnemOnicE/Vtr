@@ -95,10 +95,10 @@ class VTRContainer:
         )
 
         sidecar = VTRSidecar(
-            vtr_version="2.0",
+            vtr_version="2.1",
             hardware_signature=hardware_signature,
             legal_assertions=legal_assertions,
-            economic_data=self.prnu.get_economic_data()
+            economic_data=None
         )
 
         # Write to disk

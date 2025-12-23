@@ -30,7 +30,7 @@ class VTRSidecar(BaseModel):
     """
     The top-level schema for the VTR V2.0 Sidecar file.
     """
-    vtr_version: str = Field("2.0", pattern=r"^2\.0$", description="The version of the VTR standard.")
+    vtr_version: str = Field("2.1", pattern=r"^2\.[0-1]$", description="The version of the VTR standard.")
     hardware_signature: HardwareSignature
     legal_assertions: LegalAssertions
-    economic_data: Dict[str, Any] = Field(..., description="Economic metadata including semantic score and device tier.")
+    economic_data: Optional[Dict[str, Any]] = Field(None, description="Economic metadata including semantic score and device tier.")
