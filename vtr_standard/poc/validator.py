@@ -89,13 +89,14 @@ class VTRValidator:
                 is_valid=False,
                 error_code="INVALID_SCHEMA",
                 message=f"Schema validation failed: {e}",
-                details={"validation_errors": e.errors()}
+                details={"validation_errors": str(e)}
             )
         except Exception as e:
             return VerificationResult(
                 is_valid=False,
                 error_code="READ_ERROR",
-                message=f"Could not read sidecar: {str(e)}"
+                message=f"Could not read sidecar: {str(e)}",
+                details={"exception": str(e)}
             )
 
         # 4. Cryptographic Verification
@@ -122,10 +123,12 @@ class VTRValidator:
             previous_signature=previous_signature
         )
 
+        # Calculate actual merkle root once for both success and failure contexts
+        actual_merkle_root = MockPRNU._static_hash_video_content(video_path)
+
         if is_signature_valid:
             # Additional check: Verify the Merkle Root matches the one in sidecar
             sidecar_merkle_root = hw_sig.merkle_root
-            actual_merkle_root = MockPRNU._static_hash_video_content(video_path)
 
             if sidecar_merkle_root != actual_merkle_root:
                 return VerificationResult(
@@ -166,11 +169,17 @@ class VTRValidator:
                 details=details
             )
         else:
+            # Enhanced debugging for failed signatures
+            # We provide the values that were found/calculated to help diagnose why verification failed.
             return VerificationResult(
                 is_valid=False,
                 error_code="INVALID_SIGNATURE",
                 message="Cryptographic proof verification failed. The content may have been modified or the sidecar does not match the video.",
                 details={
-                    "timestamp_claimed": timestamp
+                    "timestamp_claimed": timestamp,
+                    "liveness_claimed": liveness_flag,
+                    "location_hash_claimed": location_block_hash,
+                    "actual_merkle_root_calculated": actual_merkle_root,
+                    "nonce": nonce
                 }
             )

@@ -44,22 +44,32 @@ class VTRContainer:
         previous_signature = None
         if previous_sidecar_path:
             try:
-                # We can use VTRSidecar to parse the previous sidecar as well, ensuring it is valid V2.0
-                # But to avoid breaking on slightly malformed previous files just for extracting one field,
-                # we might stick to robust extraction or try-parse.
-                # Let's try to be robust but favor Pydantic if possible.
+                # STRICT CHAIN OF CUSTODY CHECK
+                # If a previous link is requested, it MUST be valid.
                 with open(previous_sidecar_path, 'r') as f:
                     prev_data = json.load(f)
 
-                # Robust extraction:
-                # In V2.0, it is under hardware_signature -> zk_proof
-                # We use .get() to avoid crashing if schema is wrong, although VTRSidecar validation would be better.
-                previous_signature = prev_data.get("hardware_signature", {}).get("zk_proof")
+                # We attempt to validate the previous sidecar against the schema to ensure integrity
+                try:
+                    prev_model = VTRSidecar.model_validate(prev_data)
+                    previous_signature = prev_model.hardware_signature.zk_proof
+                except Exception as e:
+                    # Fallback to loose extraction if strict schema fails?
+                    # Sentinel says: NO. If schema is invalid, the chain is suspect.
+                    # However, to be slightly pragmatic for cross-version compatibility (if handled),
+                    # we might inspect the error. For now, we enforce structure.
+                    raise ValueError(f"Previous sidecar schema validation failed: {e}")
 
                 if not previous_signature:
-                    logger.warning(f"Could not extract zk_proof from {previous_sidecar_path}")
+                    raise ValueError(f"Could not extract zk_proof from {previous_sidecar_path}")
+
+            except FileNotFoundError:
+                raise FileNotFoundError(f"Previous sidecar not found at: {previous_sidecar_path}")
+            except json.JSONDecodeError:
+                raise ValueError(f"Previous sidecar is not valid JSON: {previous_sidecar_path}")
             except Exception as e:
-                logger.warning(f"Failed to read previous sidecar: {e}")
+                # Re-raise to halt execution. Chain of Custody cannot be optional if requested.
+                raise ValueError(f"Chain of Custody Failure: {e}") from e
 
         if wallet_address:
             logger.info(f"💰 Wallet attached: {wallet_address}")
@@ -121,6 +131,17 @@ if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='%(message)s')
     logger.info("--- OntoLogics VTR Generator v2.0 (Merged POC) ---")
+
+    # DEMO MODE: Auto-generate dummy files if they don't exist
+    def ensure_dummy_video(filename):
+        if not os.path.exists(filename):
+            logger.info(f"🎥 Generating dummy video file: {filename}")
+            # Generate 1MB of random bytes to simulate video content
+            with open(filename, 'wb') as f:
+                f.write(os.urandom(1024 * 1024))
+
+    ensure_dummy_video("first_video.mp4")
+    ensure_dummy_video("second_video.mp4")
 
     # Simulate a "Potato Phone" capturing a video (First Link in the Chain)
     camera_1 = VTRContainer("first_video.mp4", sensor_id_mock="SENSOR_PRNU_XYZ_999")
