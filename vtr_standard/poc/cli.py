@@ -48,6 +48,11 @@ def cmd_sign(args):
     # Using a default sensor ID if not provided, or the one from args
     sensor_id = args.sensor_id if args.sensor_id else "MOCK_SENSOR_DEFAULT_001"
 
+    # Validate Wallet Address
+    if args.wallet and len(args.wallet) > 128:
+        logger.error("❌  Error: Wallet address is too long (max 128 characters).")
+        sys.exit(1)
+
     try:
         container = VTRContainer(args.video_path, sensor_id_mock=sensor_id)
 
@@ -56,7 +61,8 @@ def cmd_sign(args):
 
         container.create_sidecar(
             allow_ai_training=args.allow_ai,
-            previous_sidecar_path=prev_sidecar
+            previous_sidecar_path=prev_sidecar,
+            wallet_address=args.wallet
         )
     except FileNotFoundError:
         logger.error(f"❌  Error: Video file '{args.video_path}' not found.")
@@ -98,6 +104,7 @@ def main():
     parser_sign.add_argument("--sensor-id", help="Simulate a specific Sensor ID", default=None)
     parser_sign.add_argument("--allow-ai", action="store_true", help="Allow AI training on this content")
     parser_sign.add_argument("--link-to", help="Path to a previous VTR sidecar to create a Chain of Custody")
+    parser_sign.add_argument("--wallet", help="Cryptocurrency wallet address for payments (max 128 chars)", default=None)
     parser_sign.set_defaults(func=cmd_sign)
 
     # --- VERIFY Command ---

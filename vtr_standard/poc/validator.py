@@ -157,6 +157,9 @@ class VTRValidator:
                 details["chained_to_previous_proof"] = True
                 details["previous_proof_hash"] = previous_signature
 
+            if sidecar.economic_data:
+                details["economic_data"] = sidecar.economic_data
+
             return VerificationResult(
                 is_valid=True,
                 message="VTR container is valid.",
