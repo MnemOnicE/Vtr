@@ -111,7 +111,10 @@ class VTRValidator:
         location_block_hash = hw_sig.location_block_hash
         nonce = hw_sig.nonce
 
-        # Verify using MockPRNU static method
+        # Calculate actual merkle root once to optimize IO
+        actual_merkle_root = MockPRNU._static_hash_video_content(video_path)
+
+        # Verify using MockPRNU static method, passing the pre-calculated hash
         is_signature_valid = MockPRNU.verify_zk_proof(
             public_key=public_key,
             video_path=video_path,
@@ -120,11 +123,9 @@ class VTRValidator:
             liveness_flag=liveness_flag,
             location_block_hash=location_block_hash,
             nonce=nonce,
-            previous_signature=previous_signature
+            previous_signature=previous_signature,
+            video_hash=actual_merkle_root
         )
-
-        # Calculate actual merkle root once for both success and failure contexts
-        actual_merkle_root = MockPRNU._static_hash_video_content(video_path)
 
         if is_signature_valid:
             # Additional check: Verify the Merkle Root matches the one in sidecar

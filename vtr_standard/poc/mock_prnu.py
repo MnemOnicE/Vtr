@@ -44,6 +44,17 @@ class MockPRNU:
 
         Binds the Verification Key, Merkle Root, Timestamp, Liveness, Location,
         Nonce (Replay Protection), and optional Chain-of-Custody link.
+
+        Args:
+            video_path (str): Path to the video file.
+            timestamp (float): The timestamp of capture.
+            liveness_flag (bool): The liveness status.
+            location_block_hash (str): The hash of the location block.
+            nonce (str): The replay protection nonce.
+            previous_signature (Optional[str]): The proof of the previous link.
+
+        Returns:
+            str: The simulated zk_proof string.
         """
         # 1. Calculate Hash of the actual Video Content (Merkle Root)
         video_hash = self._hash_video_content(video_path)
@@ -103,13 +114,27 @@ class MockPRNU:
         return MerkleTree(video_path).get_root()
 
     @staticmethod
-    def verify_zk_proof(public_key, video_path, timestamp, zk_proof, liveness_flag, location_block_hash, nonce, previous_signature=None):
+    def verify_zk_proof(public_key, video_path, timestamp, zk_proof, liveness_flag, location_block_hash, nonce, previous_signature=None, video_hash=None):
         """Verifies a simulated Zero-Knowledge Proof.
 
         Now requires liveness_flag, location_block_hash, and nonce to reconstruct the hash.
-        """
 
-        video_hash = MockPRNU._static_hash_video_content(video_path)
+        Args:
+            public_key (str): The public verification key.
+            video_path (str): Path to the video file (used if video_hash is None).
+            timestamp (float): The timestamp of capture.
+            zk_proof (str): The proof string to verify.
+            liveness_flag (bool): The liveness status.
+            location_block_hash (str): The hash of the location block.
+            nonce (str): The replay protection nonce.
+            previous_signature (Optional[str]): The proof of the previous link.
+            video_hash (Optional[str]): Pre-calculated Merkle Root. If provided, video_path is ignored for hashing.
+
+        Returns:
+            bool: True if the proof is valid, False otherwise.
+        """
+        if video_hash is None:
+            video_hash = MockPRNU._static_hash_video_content(video_path)
 
         # Must match the order in generate_zk_proof
         expected_data = f"{public_key}{timestamp}{video_hash}{str(liveness_flag).lower()}{location_block_hash}{nonce}"
