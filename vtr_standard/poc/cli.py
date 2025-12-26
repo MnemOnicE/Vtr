@@ -78,10 +78,24 @@ def cmd_sign(args):
 
 def cmd_verify(args):
     """Handles the 'verify' command."""
-    logger.info(f"🔍  Verifying: {args.video_path}")
+    if not args.json:
+        logger.info(f"🔍  Verifying: {args.video_path}")
 
     validator = VTRValidator()
     result = validator.validate_container(args.video_path, args.sidecar)
+
+    if args.json:
+        # Output pure JSON to stdout
+        output = {
+            "is_valid": result.is_valid,
+            "error_code": result.error_code,
+            "message": result.message,
+            "details": result.details
+        }
+        print(json.dumps(output, indent=4))
+        if not result.is_valid:
+            sys.exit(1)
+        return
 
     if result.is_valid:
         logger.info("\n✅  VERIFICATION SUCCESSFUL")
@@ -117,6 +131,7 @@ def main():
     parser_verify = subparsers.add_parser("verify", help="Verify a VTR sidecar against a video file")
     parser_verify.add_argument("video_path", help="Path to the video file")
     parser_verify.add_argument("--sidecar", help="Path to the .vtr.json sidecar (optional)", default=None)
+    parser_verify.add_argument("--json", action="store_true", help="Output result as JSON")
     parser_verify.set_defaults(func=cmd_verify)
 
     args = parser.parse_args()
