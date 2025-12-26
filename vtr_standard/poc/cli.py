@@ -62,8 +62,13 @@ def cmd_sign(args):
         container.create_sidecar(
             allow_ai_training=args.allow_ai,
             previous_sidecar_path=prev_sidecar,
-            wallet_address=args.wallet
+            wallet_address=args.wallet,
+            overwrite=args.force
         )
+    except FileExistsError as e:
+        logger.error(f"❌  Error: {e}")
+        logger.error("    Use --force to overwrite the existing sidecar.")
+        sys.exit(1)
     except FileNotFoundError:
         logger.error(f"❌  Error: Video file '{args.video_path}' not found.")
         sys.exit(1)
@@ -105,6 +110,7 @@ def main():
     parser_sign.add_argument("--allow-ai", action="store_true", help="Allow AI training on this content")
     parser_sign.add_argument("--link-to", help="Path to a previous VTR sidecar to create a Chain of Custody")
     parser_sign.add_argument("--wallet", help="Cryptocurrency wallet address for payments (max 128 chars)", default=None)
+    parser_sign.add_argument("--force", action="store_true", help="Overwrite existing sidecar file")
     parser_sign.set_defaults(func=cmd_sign)
 
     # --- VERIFY Command ---
