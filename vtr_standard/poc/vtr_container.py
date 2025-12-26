@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class VTRContainer:
     """Manages the creation of Video Truth Record (VTR) containers.
 
-    This is the canonical V2.0 generator. It handles the association of a raw video
+    This is the canonical V2.1 generator. It handles the association of a raw video
     file with a hardware root of trust (via MockPRNU), generating a sidecar file
     containing cryptographic proofs and legal assertions.
     """
@@ -29,7 +29,7 @@ class VTRContainer:
         # Initialize the hardware root of trust (the Merged MockPRNU)
         self.prnu = MockPRNU(sensor_id_mock)
 
-    def create_sidecar(self, allow_ai_training=False, previous_sidecar_path=None, wallet_address=None):
+    def create_sidecar(self, allow_ai_training=False, previous_sidecar_path=None, wallet_address=None, overwrite=False):
         """Generates the .vtr sidecar JSON file.
 
         Args:
@@ -37,10 +37,15 @@ class VTRContainer:
                 may be used for AI training datasets. Defaults to False.
             previous_sidecar_path (str, optional): Path to the previous sidecar in the chain.
             wallet_address (str, optional): The cryptocurrency wallet address for payments. Defaults to None.
+            overwrite (bool, optional): If True, overwrites an existing sidecar file. Defaults to False.
 
         Returns:
             None: This method writes the sidecar file to disk.
         """
+        filename = f"{self.video_path}.vtr.json"
+        if not overwrite and os.path.exists(filename):
+            raise FileExistsError(f"Sidecar file already exists: {filename}")
+
         previous_signature = None
         if previous_sidecar_path:
             try:
@@ -77,6 +82,10 @@ class VTRContainer:
         # --- 1. Hardware Signature Components ---
         # Calculate liveness and location first to bind them in the proof
         liveness_flag = self.prnu.check_liveness()
+
+        if not liveness_flag:
+            logger.warning("⚠️  WARNING: Liveness check FAILED. The generated VTR will be cryptographically valid but flagged as 'Synthetic' by validators.")
+
         location_block_hash = self.prnu.calculate_location_block_hash()
 
         # Generate Nonce for Replay Protection
@@ -120,7 +129,6 @@ class VTRContainer:
         )
 
         # Write to disk
-        filename = f"{self.video_path}.vtr.json"
         with open(filename, 'w') as f:
             f.write(sidecar.model_dump_json(indent=4))
 
