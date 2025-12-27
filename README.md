@@ -1,5 +1,11 @@
 # The Video Truth Record (.vtr) Project
 
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=flat-square&logo=python&logoColor=white)
+![License](https://img.shields.io/badge/License-VTR--PL-red?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Proposal%20%2F%20Draft-orange?style=flat-square)
+![Pydantic](https://img.shields.io/badge/Powered%20by-Pydantic-e92063?style=flat-square&logo=pydantic&logoColor=white)
+![Code Style](https://img.shields.io/badge/Code%20Style-Google-blue?style=flat-square)
+
 **Status:** Proposal / Draft
 **Codename:** Witness
 
