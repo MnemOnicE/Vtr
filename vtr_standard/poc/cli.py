@@ -48,10 +48,9 @@ def cmd_sign(args):
     # Using a default sensor ID if not provided, or the one from args
     sensor_id = args.sensor_id if args.sensor_id else "MOCK_SENSOR_DEFAULT_001"
 
-    # Validate Wallet Address
-    if args.wallet and len(args.wallet) > 128:
-        logger.error("❌  Error: Wallet address is too long (max 128 characters).")
-        sys.exit(1)
+    # Warning for deprecated arguments
+    if args.wallet:
+         logger.warning("⚠️  WARNING: The --wallet argument is deprecated and has no effect in V2.2.")
 
     try:
         container = VTRContainer(args.video_path, sensor_id_mock=sensor_id)
@@ -62,7 +61,6 @@ def cmd_sign(args):
         container.create_sidecar(
             allow_ai_training=args.allow_ai,
             previous_sidecar_path=prev_sidecar,
-            wallet_address=args.wallet,
             overwrite=args.force
         )
     except FileExistsError as e:
