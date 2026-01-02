@@ -161,8 +161,8 @@ class VTRValidator:
                 details["chained_to_previous_proof"] = True
                 details["previous_proof_hash"] = previous_signature
 
-            if sidecar.economic_data:
-                details["economic_data"] = sidecar.economic_data
+            # Economic data has been mothballed in V2.2.
+            # We no longer extract or validate it.
 
             return VerificationResult(
                 is_valid=True,

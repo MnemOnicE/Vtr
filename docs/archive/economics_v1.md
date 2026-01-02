@@ -1,4 +1,7 @@
-# The Economic Model: DePIN & Net Metering
+# [ARCHIVED] The Economic Model: DePIN & Net Metering
+
+> **DEPRECATION NOTICE:**
+> This document has been archived as of VTR V2.2. The project focus has shifted exclusively to providing a robust hardware-attestation standard for security and verification. The economic models described below (DePIN, Tokens, Net Metering) are preserved here for historical context only and are **not** part of the active VTR standard.
 
 ## 1. Overview
 The `.vtr` ecosystem is designed as a Decentralized Physical Infrastructure Network (DePIN) that incentivizes the creation of verified, human-generated data. It employs a "Net Metering" model where users are compensated for the data they generate, effectively allowing their phones to pay for their own data plans.

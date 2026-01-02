@@ -29,14 +29,13 @@ class VTRContainer:
         # Initialize the hardware root of trust (the Merged MockPRNU)
         self.prnu = MockPRNU(sensor_id_mock)
 
-    def create_sidecar(self, allow_ai_training=False, previous_sidecar_path=None, wallet_address=None, overwrite=False):
+    def create_sidecar(self, allow_ai_training=False, previous_sidecar_path=None, overwrite=False):
         """Generates the .vtr sidecar JSON file.
 
         Args:
             allow_ai_training (bool, optional): A flag indicating whether the content
                 may be used for AI training datasets. Defaults to False.
             previous_sidecar_path (str, optional): Path to the previous sidecar in the chain.
-            wallet_address (str, optional): The cryptocurrency wallet address for payments. Defaults to None.
             overwrite (bool, optional): If True, overwrites an existing sidecar file. Defaults to False.
 
         Returns:
@@ -76,9 +75,6 @@ class VTRContainer:
                 # Re-raise to halt execution. Chain of Custody cannot be optional if requested.
                 raise ValueError(f"Chain of Custody Failure: {e}") from e
 
-        if wallet_address:
-            logger.info(f"💰 Wallet attached: {wallet_address}")
-
         # --- 1. Hardware Signature Components ---
         # Calculate liveness and location first to bind them in the proof
         liveness_flag = self.prnu.check_liveness()
@@ -117,15 +113,10 @@ class VTRContainer:
             copyright_notice="Scraping this data without consent violates DMCA Sec 1202."
         )
 
-        economic_data = None
-        if wallet_address:
-            economic_data = {'payment_address': wallet_address}
-
         sidecar = VTRSidecar(
-            vtr_version="2.1",
+            vtr_version="2.2",
             hardware_signature=hardware_signature,
-            legal_assertions=legal_assertions,
-            economic_data=economic_data
+            legal_assertions=legal_assertions
         )
 
         # Write to disk

@@ -1,41 +1,39 @@
-# The Video Truth Record (.vtr) Project
+# The Video Truth Record (.vtr) Standard
 
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=flat-square&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-VTR--PL-red?style=flat-square)
-![Status](https://img.shields.io/badge/Status-Proposal%20%2F%20Draft-orange?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Reference%20Impl-green?style=flat-square)
 ![Pydantic](https://img.shields.io/badge/Powered%20by-Pydantic-e92063?style=flat-square&logo=pydantic&logoColor=white)
 ![Code Style](https://img.shields.io/badge/Code%20Style-Google-blue?style=flat-square)
 
-**Status:** Proposal / Draft
-**Codename:** Witness
+**Status:** Reference Implementation (V2.2)
+**Focus:** Security & Chain of Custody
 
 ## Overview
 
-As generative AI approaches photorealism, the "Signal-to-Noise" ratio of the internet approaches zero. Current verification methods (watermarking, ID verification) are either fragile or dystopian.
+The **Video Truth Record (.vtr)** is an open standard for **Hardware-Attested Media**. It provides a cryptographic binding between video content and the physical sensor that captured it, ensuring authenticity and chain of custody for critical applications.
 
-The **Video Truth Record (.vtr)** is an open standard for **Hardware-Signed Media Attribution**. It binds video content to a specific hardware sensor (PRNU) at the moment of capture, ensuring the authenticity of "Human-Generated Data" without requiring user identity disclosure.
+This standard is designed for **Security Cameras, Dashcams, and Trusted User Devices** where data integrity is paramount. It solves the "Deepfake Defense" problem by verifying the *source hardware* rather than analyzing the pixels.
 
 **Core Principles:**
-1.  **Hardware is Truth:** We trust the physics of the sensor, not the logic of the OS.
-2.  **Blind Notary:** Verify the "What" (Humanity), protect the "Who" (Identity).
-3.  **Innocent Until Proven Wealthy:** Works on budget hardware ("Potato Phones") via high-noise sensors.
+1.  **Hardware is Truth:** We rely on the physical fingerprint (PRNU) of the sensor, not software signatures.
+2.  **Privacy by Design:** Zero-Knowledge Proofs verify the hardware signature without revealing the device's unique serial number or owner identity.
+3.  **Chain of Custody:** Each recording is cryptographically linked to the previous one, creating an unbroken timeline of events.
 
 ## Features
 
-*   **Hardware Root of Trust:** Uses Photo Response Non-Uniformity (PRNU) to uniquely identify camera sensors.
-*   **Zero-Knowledge Proofs (ZKP):** Validates authenticity without revealing the raw unique sensor ID.
-*   **Liveness Detection:** Simulates checks for 3D parallax and other patterns to prevent "replay" attacks or recording screens.
-*   **Legal Assertions:** Embeds meta-tags regarding AI training consent (e.g., DMCA Sec 1202).
+*   **Hardware Root of Trust:** Leverages unique sensor noise patterns (PRNU) to attest origin.
+*   **Tamper-Evident Container:** Merkle Tree hashing ensures frame-by-frame integrity.
+*   **Chain of Custody:** "Blockchain-style" linking of file signatures provides audit trails for legal and security contexts.
+*   **Liveness Detection:** Protocol support for hardware-level liveness checks (e.g., 3D depth, gyro) to prevent screen recording attacks.
 
 ## Repository Structure
 
 The repository is organized as follows:
 
-*   `/vtr_standard`: The main project directory containing the standard definitions and reference implementation.
-    *   `/whitepaper`: The full "Seth Protocol" master plan and economic model.
-    *   `/specs`: The technical Request For Comments (RFC) documents defining the standard.
-    *   `/poc`: Python proof-of-concept for the metadata container and verification logic (Reference Implementation).
-    *   `/docs`: Documentation files.
+*   `/vtr_standard`: The canonical Python implementation of the standard.
+    *   `/poc`: The **Reference Implementation** (SDK) for hardware integrators.
+    *   `/docs`: Technical documentation.
 
 ## Installation & Setup
 
