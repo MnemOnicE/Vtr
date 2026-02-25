@@ -63,11 +63,17 @@ class MockPRNU:
         verification_key = self.get_public_key()
 
         # 3. Create the Proof (Signs Key + Timestamp + Video Hash + Liveness + Location + Nonce + Previous Signature)
+        # Optimization: Use "".join() for faster concatenation than f-string + optional +=.
         # We cast liveness_flag (bool) to str explicitly for consistent hashing.
-        data_to_sign = f"{verification_key}{timestamp}{video_hash}{str(liveness_flag).lower()}{location_block_hash}{nonce}"
-
-        if previous_signature:
-            data_to_sign += previous_signature
+        data_to_sign = "|".join([
+            verification_key,
+            str(timestamp),
+            video_hash,
+            "true" if liveness_flag else "false",
+            location_block_hash,
+            nonce,
+            previous_signature or ""
+        ])
 
         proof_hash = hashlib.sha256(data_to_sign.encode()).hexdigest()
         # Match the prefix from the older standard poc logic for proof readability
@@ -137,10 +143,16 @@ class MockPRNU:
             video_hash = MockPRNU._static_hash_video_content(video_path)
 
         # Must match the order in generate_zk_proof
-        expected_data = f"{public_key}{timestamp}{video_hash}{str(liveness_flag).lower()}{location_block_hash}{nonce}"
-
-        if previous_signature:
-            expected_data += previous_signature
+        # Optimization: Use "".join() for faster concatenation than f-string + optional +=.
+        expected_data = "|".join([
+            public_key,
+            str(timestamp),
+            video_hash,
+            "true" if liveness_flag else "false",
+            location_block_hash,
+            nonce,
+            previous_signature or ""
+        ])
 
         expected_proof_hash = hashlib.sha256(expected_data.encode()).hexdigest()
         expected_proof = f"zk_snark_{expected_proof_hash[:16]}"
