@@ -33,4 +33,4 @@ class VTRSidecar(BaseModel):
     vtr_version: str = Field("2.2", pattern=r"^2\.[0-2]$", description="The version of the VTR standard.")
     hardware_signature: HardwareSignature
     legal_assertions: LegalAssertions
-    # economic_data field has been removed in V2.2 (See vtr_standard/poc/legacy.py)
+    # economic_data field has been removed in V2.2
