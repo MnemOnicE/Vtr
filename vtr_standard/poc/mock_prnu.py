@@ -144,7 +144,7 @@ class MockPRNU:
 
         # Must match the order in generate_zk_proof
         # Optimization: Use "".join() for faster concatenation than f-string + optional +=.
-        expected_data = "".join([
+        expected_data = "|".join([
             public_key,
             str(timestamp),
             video_hash,
