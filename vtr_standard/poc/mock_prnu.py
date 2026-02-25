@@ -65,7 +65,7 @@ class MockPRNU:
         # 3. Create the Proof (Signs Key + Timestamp + Video Hash + Liveness + Location + Nonce + Previous Signature)
         # Optimization: Use "".join() for faster concatenation than f-string + optional +=.
         # We cast liveness_flag (bool) to str explicitly for consistent hashing.
-        data_to_sign = "".join([
+        data_to_sign = "|".join([
             verification_key,
             str(timestamp),
             video_hash,
