@@ -38,6 +38,10 @@ class VTRValidator:
     verification of the hardware signature against the video content.
     """
 
+    def _sanitize_for_logging(self, message: Any) -> str:
+        """Escapes newlines and other control characters to prevent log injection."""
+        return str(message).replace('\n', '\\n').replace('\r', '\\r')
+
     def validate_container(self, video_path: str, sidecar_path: Optional[str] = None) -> VerificationResult:
         """Validates a video file against its VTR sidecar.
 
@@ -89,7 +93,8 @@ class VTRValidator:
             )
         except ValidationError as e:
             # Pydantic validation failed - Log internally, sanitize externally
-            logger.error(f"VTR Schema Validation Error: {e}")
+            # Parameterized logging + sanitization prevents log injection and data leakage
+            logger.error("VTR Schema Validation Error: %s", self._sanitize_for_logging(e))
             return VerificationResult(
                 is_valid=False,
                 error_code="INVALID_SCHEMA",
@@ -98,7 +103,8 @@ class VTRValidator:
             )
         except Exception as e:
             # Generic read failure - Log internally, sanitize externally
-            logger.error("VTR Sidecar Read Error", exc_info=True)
+            # exc_info=True is avoided to prevent stack trace leakage in production logs
+            logger.error("VTR Sidecar Read Error: %s", self._sanitize_for_logging(e))
             return VerificationResult(
                 is_valid=False,
                 error_code="READ_ERROR",
