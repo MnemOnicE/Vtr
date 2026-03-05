@@ -172,15 +172,8 @@ class VTRValidator:
         else:
             # Enhanced debugging for failed signatures
             # We provide the values that were found/calculated to help diagnose why verification failed.
-            expected_proof = MockPRNU.calculate_expected_proof(
-                public_key=public_key,
-                video_hash=actual_merkle_root,
-                timestamp=timestamp,
-                liveness_flag=liveness_flag,
-                location_block_hash=location_block_hash,
-                nonce=nonce,
-                previous_signature=previous_signature
-            )
+            # SECURITY: We do NOT return the expected_proof in the details to avoid creating an oracle.
+            # Instead, we only return the public fields and received proof for analysis.
 
             return VerificationResult(
                 is_valid=False,
@@ -194,7 +187,6 @@ class VTRValidator:
                     "nonce": nonce,
                     "public_key": public_key,
                     "previous_signature_link": previous_signature,
-                    "proof_received": zk_proof,
-                    "proof_expected": expected_proof
+                    "proof_received": zk_proof
                 }
             )

@@ -7,6 +7,7 @@ import hashlib
 import time
 import random
 import os
+import json
 from .merkle import MerkleTree
 
 class MockPRNU:
@@ -114,7 +115,7 @@ class MockPRNU:
         return MerkleTree(video_path).get_root()
 
     @staticmethod
-    def calculate_expected_proof(public_key: str, video_hash: str, timestamp: float, liveness_flag: bool, location_block_hash: str, nonce: str, previous_signature: Optional[str] = None) -> str:
+    def calculate_expected_proof(public_key, video_hash, timestamp, liveness_flag, location_block_hash, nonce, previous_signature=None):
         """Calculates the expected zk_proof string based on the provided inputs.
 
         Args:
@@ -129,17 +130,20 @@ class MockPRNU:
         Returns:
             str: The expected zk_proof string.
         """
-        # Optimization: Use "|".join() for faster concatenation.
-        # We cast liveness_flag (bool) to lowercase string for consistent hashing.
-        data_to_sign = "|".join([
-            public_key,
-            str(timestamp),
-            video_hash,
-            "true" if liveness_flag else "false",
-            location_block_hash,
-            nonce,
-            previous_signature or ""
-        ])
+        # SECURITY PATCH: Use JSON serialization to prevent canonicalization attacks
+        # (e.g., shifting delimiters between fields).
+        payload = {
+            "pk": public_key,
+            "ts": timestamp,
+            "hash": video_hash,
+            "live": liveness_flag,
+            "loc": location_block_hash,
+            "nonce": nonce,
+            "prev": previous_signature or ""
+        }
+
+        # We use sort_keys=True to ensure deterministic serialization
+        data_to_sign = json.dumps(payload, sort_keys=True)
 
         proof_hash = hashlib.sha256(data_to_sign.encode()).hexdigest()
         return f"zk_snark_{proof_hash[:16]}"
