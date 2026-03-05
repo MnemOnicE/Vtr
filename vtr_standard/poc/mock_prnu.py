@@ -114,7 +114,7 @@ class MockPRNU:
         return MerkleTree(video_path).get_root()
 
     @staticmethod
-    def calculate_expected_proof(public_key, video_hash, timestamp, liveness_flag, location_block_hash, nonce, previous_signature=None):
+    def calculate_expected_proof(public_key: str, video_hash: str, timestamp: float, liveness_flag: bool, location_block_hash: str, nonce: str, previous_signature: Optional[str] = None) -> str:
         """Calculates the expected zk_proof string based on the provided inputs.
 
         Args:
