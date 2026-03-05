@@ -69,8 +69,8 @@ class MerkleTree:
 
         # Explicitly check for file existence to preserve strict error handling contract
         # This ensures FileNotFoundError is raised immediately, matching legacy behavior.
-        if not os.path.exists(self.file_path):
-            raise FileNotFoundError(f"File not found: {self.file_path}")
+        if not os.path.isfile(self.file_path):
+            raise FileNotFoundError(f"File not found or is not a regular file: {self.file_path}")
 
         self.leaves = self._compute_leaves()
         self.root = self._compute_root(self.leaves)
