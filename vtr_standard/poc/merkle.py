@@ -3,6 +3,7 @@
 # A copy of the License is available in the root/vtr_standard/poc/LICENSE file.
 # This code is distributed WITHOUT ANY WARRANTY.
 
+import os
 import hashlib
 import threading
 import logging
@@ -68,14 +69,8 @@ class MerkleTree:
 
         # Explicitly check for file existence to preserve strict error handling contract
         # This ensures FileNotFoundError is raised immediately, matching legacy behavior.
-        try:
-            with open(self.file_path, 'rb'):
-                pass
-        except FileNotFoundError:
+        if not os.path.exists(self.file_path):
             raise FileNotFoundError(f"File not found: {self.file_path}")
-        except Exception:
-            # Ignore other errors here; let the stream thread or OS handle them if they persist
-            pass
 
         self.leaves = self._compute_leaves()
         self.root = self._compute_root(self.leaves)
