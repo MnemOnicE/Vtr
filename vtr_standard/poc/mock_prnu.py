@@ -62,22 +62,16 @@ class MockPRNU:
         # 2. Derive the Public Verification Key
         verification_key = self.get_public_key()
 
-        # 3. Create the Proof (Signs Key + Timestamp + Video Hash + Liveness + Location + Nonce + Previous Signature)
-        # Optimization: Use "".join() for faster concatenation than f-string + optional +=.
-        # We cast liveness_flag (bool) to str explicitly for consistent hashing.
-        data_to_sign = "|".join([
-            verification_key,
-            str(timestamp),
-            video_hash,
-            "true" if liveness_flag else "false",
-            location_block_hash,
-            nonce,
-            previous_signature or ""
-        ])
-
-        proof_hash = hashlib.sha256(data_to_sign.encode()).hexdigest()
-        # Match the prefix from the older standard poc logic for proof readability
-        return f"zk_snark_{proof_hash[:16]}"
+        # 3. Create the Proof
+        return self.calculate_expected_proof(
+            public_key=verification_key,
+            video_hash=video_hash,
+            timestamp=timestamp,
+            liveness_flag=liveness_flag,
+            location_block_hash=location_block_hash,
+            nonce=nonce,
+            previous_signature=previous_signature
+        )
 
     def check_liveness(self):
         """Simulates the Passive Liveness / Anti-Matrix Check.
@@ -120,6 +114,37 @@ class MockPRNU:
         return MerkleTree(video_path).get_root()
 
     @staticmethod
+    def calculate_expected_proof(public_key, video_hash, timestamp, liveness_flag, location_block_hash, nonce, previous_signature=None):
+        """Calculates the expected zk_proof string based on the provided inputs.
+
+        Args:
+            public_key (str): The public verification key.
+            video_hash (str): The Merkle Root of the video content.
+            timestamp (float): The timestamp of capture.
+            liveness_flag (bool): The liveness status.
+            location_block_hash (str): The hash of the location block.
+            nonce (str): The replay protection nonce.
+            previous_signature (Optional[str]): The proof of the previous link.
+
+        Returns:
+            str: The expected zk_proof string.
+        """
+        # Optimization: Use "|".join() for faster concatenation.
+        # We cast liveness_flag (bool) to lowercase string for consistent hashing.
+        data_to_sign = "|".join([
+            public_key,
+            str(timestamp),
+            video_hash,
+            "true" if liveness_flag else "false",
+            location_block_hash,
+            nonce,
+            previous_signature or ""
+        ])
+
+        proof_hash = hashlib.sha256(data_to_sign.encode()).hexdigest()
+        return f"zk_snark_{proof_hash[:16]}"
+
+    @staticmethod
     def verify_zk_proof(public_key, video_path, timestamp, zk_proof, liveness_flag, location_block_hash, nonce, previous_signature=None, video_hash=None):
         """Verifies a simulated Zero-Knowledge Proof.
 
@@ -142,19 +167,14 @@ class MockPRNU:
         if video_hash is None:
             video_hash = MockPRNU._static_hash_video_content(video_path)
 
-        # Must match the order in generate_zk_proof
-        # Optimization: Use "".join() for faster concatenation than f-string + optional +=.
-        expected_data = "|".join([
-            public_key,
-            str(timestamp),
-            video_hash,
-            "true" if liveness_flag else "false",
-            location_block_hash,
-            nonce,
-            previous_signature or ""
-        ])
-
-        expected_proof_hash = hashlib.sha256(expected_data.encode()).hexdigest()
-        expected_proof = f"zk_snark_{expected_proof_hash[:16]}"
+        expected_proof = MockPRNU.calculate_expected_proof(
+            public_key=public_key,
+            video_hash=video_hash,
+            timestamp=timestamp,
+            liveness_flag=liveness_flag,
+            location_block_hash=location_block_hash,
+            nonce=nonce,
+            previous_signature=previous_signature
+        )
 
         return expected_proof == zk_proof
