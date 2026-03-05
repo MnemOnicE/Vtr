@@ -98,7 +98,7 @@ class VTRValidator:
             )
         except Exception as e:
             # Generic read failure - Log internally, sanitize externally
-            logger.error(f"VTR Sidecar Read Error: {str(e)}", exc_info=True)
+            logger.error("VTR Sidecar Read Error", exc_info=True)
             return VerificationResult(
                 is_valid=False,
                 error_code="READ_ERROR",
