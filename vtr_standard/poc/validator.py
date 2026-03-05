@@ -5,11 +5,15 @@
 
 import json
 import os
+import logging
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
 from pydantic import ValidationError
 from .mock_prnu import MockPRNU
 from .schemas import VTRSidecar
+
+# Configure module-level logger
+logger = logging.getLogger(__name__)
 
 @dataclass
 class VerificationResult:
@@ -84,19 +88,22 @@ class VTRValidator:
                 message="Sidecar file contains invalid JSON."
             )
         except ValidationError as e:
-            # Pydantic validation failed
+            # Pydantic validation failed - Log internally, sanitize externally
+            logger.error(f"VTR Schema Validation Error: {e}")
             return VerificationResult(
                 is_valid=False,
                 error_code="INVALID_SCHEMA",
-                message=f"Schema validation failed: {e}",
-                details={"validation_errors": str(e)}
+                message="Sidecar file does not match the required VTR schema.",
+                details={"validation_error_count": len(e.errors()) if hasattr(e, 'errors') else 1}
             )
         except Exception as e:
+            # Generic read failure - Log internally, sanitize externally
+            logger.error("VTR Sidecar Read Error", exc_info=True)
             return VerificationResult(
                 is_valid=False,
                 error_code="READ_ERROR",
-                message=f"Could not read sidecar: {str(e)}",
-                details={"exception": str(e)}
+                message="An error occurred while reading or parsing the sidecar file.",
+                details={}
             )
 
         # 4. Cryptographic Verification
