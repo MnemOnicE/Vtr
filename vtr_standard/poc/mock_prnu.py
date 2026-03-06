@@ -4,6 +4,7 @@
 # This code is distributed WITHOUT ANY WARRANTY.
 
 import hashlib
+from typing import Optional
 import time
 import random
 import os
@@ -39,25 +40,27 @@ class MockPRNU:
         """Calculates the Merkle Root of the video file content."""
         return MockPRNU._static_hash_video_content(video_path)
 
-    def generate_zk_proof(self, video_path, timestamp, liveness_flag, location_block_hash, nonce, previous_signature=None):
+    def generate_zk_proof(self, video_path, timestamp, liveness_flag, location_block_hash, nonce, previous_signature=None, video_hash=None):
         """Simulates generating a Zero-Knowledge Proof (ZKP) for V2.0.
 
         Binds the Verification Key, Merkle Root, Timestamp, Liveness, Location,
         Nonce (Replay Protection), and optional Chain-of-Custody link.
 
         Args:
-            video_path (str): Path to the video file.
+            video_path (str): Path to the video file (used if video_hash is None).
             timestamp (float): The timestamp of capture.
             liveness_flag (bool): The liveness status.
             location_block_hash (str): The hash of the location block.
             nonce (str): The replay protection nonce.
             previous_signature (Optional[str]): The proof of the previous link.
+            video_hash (Optional[str]): Pre-calculated Merkle Root. If provided, video_path is ignored for hashing.
 
         Returns:
             str: The simulated zk_proof string.
         """
         # 1. Calculate Hash of the actual Video Content (Merkle Root)
-        video_hash = self._hash_video_content(video_path)
+        if video_hash is None:
+            video_hash = self._hash_video_content(video_path)
 
         # 2. Derive the Public Verification Key
         verification_key = self.get_public_key()
