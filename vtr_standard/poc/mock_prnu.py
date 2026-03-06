@@ -4,6 +4,7 @@
 # This code is distributed WITHOUT ANY WARRANTY.
 
 import hashlib
+from typing import Optional
 import time
 import random
 import os
