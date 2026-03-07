@@ -36,7 +36,7 @@ class MockPRNU:
         """Derives a simulated Public Verification Key from the sensor ID."""
         return hashlib.sha256(self.sensor_id.encode()).hexdigest()
 
-    def _hash_video_content(self, video_path):
+    def hash_video_content(self, video_path):
         """Calculates the Merkle Root of the video file content."""
         return MockPRNU._static_hash_video_content(video_path)
 
@@ -60,7 +60,7 @@ class MockPRNU:
         """
         # 1. Calculate Hash of the actual Video Content (Merkle Root)
         if video_hash is None:
-            video_hash = self._hash_video_content(video_path)
+            video_hash = self.hash_video_content(video_path)
 
         # 2. Derive the Public Verification Key
         verification_key = self.get_public_key()

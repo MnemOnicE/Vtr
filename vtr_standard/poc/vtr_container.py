@@ -88,7 +88,7 @@ class VTRContainer:
         nonce = uuid.uuid4().hex
 
         # Calculate Merkle Root once to optimize IO
-        actual_merkle_root = self.prnu._hash_video_content(self.video_path)
+        actual_merkle_root = self.prnu.hash_video_content(self.video_path)
 
         zk_proof = self.prnu.generate_zk_proof(
             self.video_path,
