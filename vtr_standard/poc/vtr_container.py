@@ -87,13 +87,17 @@ class VTRContainer:
         # Generate Nonce for Replay Protection
         nonce = uuid.uuid4().hex
 
+        # Calculate Merkle Root once to optimize IO
+        actual_merkle_root = self.prnu._hash_video_content(self.video_path)
+
         zk_proof = self.prnu.generate_zk_proof(
             self.video_path,
             self.timestamp,
             liveness_flag=liveness_flag,
             location_block_hash=location_block_hash,
             nonce=nonce,
-            previous_signature=previous_signature
+            previous_signature=previous_signature,
+            video_hash=actual_merkle_root
         )
 
         hardware_signature = HardwareSignature(
@@ -101,7 +105,7 @@ class VTRContainer:
             zk_proof=zk_proof,
             liveness_flag=liveness_flag,
             timestamp=self.timestamp,
-            merkle_root=self.prnu._hash_video_content(self.video_path),
+            merkle_root=actual_merkle_root,
             location_block_hash=location_block_hash,
             previous_signature_link=previous_signature,
             nonce=nonce
