@@ -4,10 +4,10 @@
 # This code is distributed WITHOUT ANY WARRANTY.
 
 import hashlib
-from typing import Optional
-import time
-import random
 import os
+import random
+import time
+from typing import Optional
 from .merkle import MerkleTree
 
 class MockPRNU:
@@ -30,7 +30,7 @@ class MockPRNU:
 
         # Mock GPS Block used for location hashing.
         # Check env var for deterministic override: VTR_TEST_GPS
-        self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
+        self.gps_salt = os.environ.get("VTR_TEST_GPS", os.urandom(16).hex())
 
     def get_public_key(self):
         """Derives a simulated Public Verification Key from the sensor ID."""
