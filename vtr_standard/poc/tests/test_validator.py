@@ -37,7 +37,8 @@ from vtr_standard.poc.validator import VTRValidator
 
 class TestValidator(unittest.TestCase):
     def setUp(self):
-        self.video_file = "test_invalid_json_video.mp4"
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.video_file = os.path.join(self.temp_dir.name, "test_invalid_json_video.mp4")
         self.sidecar_file = f"{self.video_file}.vtr.json"
 
         # Create a dummy video file
@@ -45,10 +46,7 @@ class TestValidator(unittest.TestCase):
             f.write(b"dummy video content")
 
     def tearDown(self):
-        if os.path.exists(self.video_file):
-            os.remove(self.video_file)
-        if os.path.exists(self.sidecar_file):
-            os.remove(self.sidecar_file)
+        self.temp_dir.cleanup()
 
     def test_invalid_json_sidecar(self):
         """Test that validating a sidecar with invalid JSON returns the correct error."""
