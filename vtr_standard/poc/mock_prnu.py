@@ -4,10 +4,11 @@
 # This code is distributed WITHOUT ANY WARRANTY.
 
 import hashlib
-import random
 import os
-from .merkle import MerkleTree
+import random
 from typing import Optional
+
+from .merkle import MerkleTree
 
 class MockPRNU:
     """Simulates the Hardware Root of Trust and PRNU (Photo Response Non-Uniformity) logic.
