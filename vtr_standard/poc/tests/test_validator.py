@@ -3,9 +3,9 @@
 # A copy of the License is available in the root/vtr_standard/poc/LICENSE file.
 # This code is distributed WITHOUT ANY WARRANTY.
 
-import unittest
 import os
 import sys
+import unittest
 from unittest.mock import MagicMock
 
 # VTR-STANDUP: Fallback Mock for restricted environments where pydantic is missing.
@@ -37,8 +37,7 @@ from vtr_standard.poc.validator import VTRValidator
 
 class TestValidator(unittest.TestCase):
     def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.video_file = os.path.join(self.temp_dir.name, "test_invalid_json_video.mp4")
+        self.video_file = "test_invalid_json_video.mp4"
         self.sidecar_file = f"{self.video_file}.vtr.json"
 
         # Create a dummy video file
@@ -46,7 +45,10 @@ class TestValidator(unittest.TestCase):
             f.write(b"dummy video content")
 
     def tearDown(self):
-        self.temp_dir.cleanup()
+        if os.path.exists(self.video_file):
+            os.remove(self.video_file)
+        if os.path.exists(self.sidecar_file):
+            os.remove(self.sidecar_file)
 
     def test_invalid_json_sidecar(self):
         """Test that validating a sidecar with invalid JSON returns the correct error."""
