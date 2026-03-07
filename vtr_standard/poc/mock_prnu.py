@@ -6,8 +6,8 @@
 import hashlib
 import os
 import random
+import time
 from typing import Optional
-
 from .merkle import MerkleTree
 
 class MockPRNU:
