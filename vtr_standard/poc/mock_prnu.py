@@ -4,10 +4,15 @@
 # This code is distributed WITHOUT ANY WARRANTY.
 
 import hashlib
+import hmac
 from typing import Optional
 import time
 import random
 import os
+import random
+import time
+from typing import Optional
+
 from .merkle import MerkleTree
 
 class MockPRNU:
@@ -180,4 +185,4 @@ class MockPRNU:
             previous_signature=previous_signature
         )
 
-        return expected_proof == zk_proof
+        return hmac.compare_digest(expected_proof, zk_proof)
