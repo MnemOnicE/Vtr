@@ -4,11 +4,12 @@
 # This code is distributed WITHOUT ANY WARRANTY.
 
 import hashlib
-import time
-import random
-import os
 import hmac
+import os
+import random
+import time
 from typing import Optional
+
 from .merkle import MerkleTree
 
 class MockPRNU:
