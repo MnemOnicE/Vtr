@@ -15,7 +15,7 @@ class MockPRNU:
     """Simulates the Hardware Root of Trust and PRNU (Photo Response Non-Uniformity) logic.
 
     This is the canonical V2.0 implementation, merging real Merkle hashing
-    with V2.0 schema mock functions (Liveness, Location).
+    with V2.2 schema mock functions (Liveness, Location).
     """
 
     def __init__(self, sensor_id):
