@@ -89,7 +89,9 @@ class VTRValidator:
             )
         except ValidationError as e:
             # Pydantic validation failed - Log internally, sanitize externally
-            logger.error(f"VTR Schema Validation Error: {e}")
+            # Sanitize error string to prevent log injection (replacing newlines with |)
+            sanitized_error = str(e).replace("\n", " | ").replace("\r", " | ")
+            logger.error(f"VTR Schema Validation Error: {sanitized_error}")
             return VerificationResult(
                 is_valid=False,
                 error_code="INVALID_SCHEMA",
