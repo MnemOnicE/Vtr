@@ -5,12 +5,8 @@
 
 import hashlib
 import hmac
-from typing import Optional
-import time
-import random
 import os
 import random
-import time
 from typing import Optional
 
 from .merkle import MerkleTree
@@ -19,7 +15,7 @@ class MockPRNU:
     """Simulates the Hardware Root of Trust and PRNU (Photo Response Non-Uniformity) logic.
 
     This is the canonical V2.0 implementation, merging real Merkle hashing
-    with V2.0 schema mock functions (Liveness, Semantic Score, Location).
+    with V2.0 schema mock functions (Liveness, Location).
     """
 
     def __init__(self, sensor_id):
@@ -98,23 +94,6 @@ class MockPRNU:
     def calculate_location_block_hash(self):
         """Calculates the hash of the location data (salted)."""
         return hashlib.sha256(self.gps_salt.encode()).hexdigest()
-
-    def _calculate_semantic_score(self):
-        """Simulates AI analysis of scene complexity for economic data."""
-        env_score = os.environ.get("VTR_TEST_SEMANTIC_SCORE")
-        if env_score is not None:
-            try:
-                return float(env_score)
-            except ValueError:
-                pass # Fallback to default if invalid
-        return 88.4
-
-    def get_economic_data(self):
-        """Returns the fully mocked economic data block."""
-        return {
-            "semantic_score": self._calculate_semantic_score(),
-            "device_tier": "Potato_Phone_Tier_1"
-        }
 
     @staticmethod
     def _static_hash_video_content(video_path):
