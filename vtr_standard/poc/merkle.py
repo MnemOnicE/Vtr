@@ -75,20 +75,20 @@ class MerkleTree:
         self.leaves = self._compute_leaves()
         self.root = self._compute_root(self.leaves)
 
-    def _compute_leaves(self) -> List[str]:
+    def _compute_leaves(self) -> List[bytes]:
         """Reads the file in chunks using AsyncFileStream and computes SHA256 hash for each chunk."""
         hashes = []
         streamer = AsyncFileStream(self.file_path, self.chunk_size)
 
         for chunk in streamer.stream():
-            hashes.append(hashlib.sha256(chunk).hexdigest())
+            hashes.append(hashlib.sha256(chunk).digest())
 
         if not hashes:
-            return [hashlib.sha256(b"").hexdigest()]
+            return [hashlib.sha256(b"").digest()]
 
         return hashes
 
-    def _compute_root(self, leaves: List[str]) -> str:
+    def _compute_root(self, leaves: List[bytes]) -> str:
         """Iteratively computes the Merkle Root from a list of hashes."""
         current_level = leaves
         if not current_level:
@@ -102,10 +102,11 @@ class MerkleTree:
                 node2 = current_level[i+1] if i + 1 < len(current_level) else node1
 
                 combined = node1 + node2
-                parents.append(hashlib.sha256(combined.encode()).hexdigest())
+                parents.append(hashlib.sha256(combined).digest())
             current_level = parents
 
-        return current_level[0]
+        # Final result is returned as a hex string for public API compatibility
+        return current_level[0].hex()
 
     def get_root(self) -> str:
         """Returns the hexadecimal Merkle Root."""
