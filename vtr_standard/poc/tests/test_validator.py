@@ -75,7 +75,7 @@ class TestValidator(unittest.TestCase):
         # Mock VTRSidecar.model_validate to raise a ValidationError
         # We must keep the patch active during the validate_container call
         with unittest.mock.patch('vtr_standard.poc.validator.VTRSidecar.model_validate') as mock_validate:
-            mock_error = ValidationError("Test Error\r\nLine 1\nLine 2\rLine 3")
+            mock_error = ValidationError.from_exception_data('Test Error\r\nLine 1\nLine 2\rLine 3', []) if hasattr(ValidationError, 'from_exception_data') else ValidationError('Test Error\r\nLine 1\nLine 2\rLine 3')
             mock_validate.side_effect = mock_error
 
             # Create a dummy sidecar file so it passes the existence check
