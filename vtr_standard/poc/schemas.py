@@ -3,7 +3,7 @@
 # A copy of the License is available in the root/vtr_standard/poc/LICENSE file.
 # This code is distributed WITHOUT ANY WARRANTY.
 
-from typing import Optional, Any, Dict
+from typing import Optional
 from pydantic import BaseModel, Field
 
 class HardwareSignature(BaseModel):

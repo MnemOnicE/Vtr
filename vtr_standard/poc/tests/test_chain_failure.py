@@ -34,14 +34,41 @@ class TestChainFailure(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             container.create_sidecar(previous_sidecar_path=self.bad_sidecar)
 
-        self.assertIn("Chain of Custody", str(context.exception) + str(context.exception.__cause__))
+        # The bad_sidecar has invalid schema, which gets caught and re-raised as "Chain of Custody Failure: ..."
+        self.assertIn("Chain of Custody Failure:", str(context.exception))
+        self.assertIn("Previous sidecar schema validation failed:", str(context.exception.__cause__))
+
+
+
 
     def test_missing_sidecar_raises_exception(self):
         """Test that linking to a non-existent sidecar raises FileNotFoundError."""
         container = VTRContainer(self.video_file, "TEST_SENSOR")
+        missing_path = "non_existent.json"
 
-        with self.assertRaises(FileNotFoundError):
-            container.create_sidecar(previous_sidecar_path="non_existent.json")
+        with self.assertRaises(FileNotFoundError) as context:
+            container.create_sidecar(previous_sidecar_path=missing_path)
+
+        self.assertEqual(str(context.exception), f"Previous sidecar not found at: {missing_path}")
+
+
+    def test_invalid_json_sidecar_raises_exception(self):
+        """Test that linking to a sidecar with invalid JSON raises ValueError."""
+        container = VTRContainer(self.video_file, "TEST_SENSOR")
+
+        # Create an invalid JSON sidecar
+        invalid_json_sidecar = "invalid_json.vtr.json"
+        with open(invalid_json_sidecar, "w") as f:
+            f.write("{ invalid json format ")
+
+        try:
+            with self.assertRaises(ValueError) as context:
+                container.create_sidecar(previous_sidecar_path=invalid_json_sidecar)
+
+            self.assertEqual(str(context.exception), f"Previous sidecar is not valid JSON: {invalid_json_sidecar}")
+        finally:
+            if os.path.exists(invalid_json_sidecar):
+                os.remove(invalid_json_sidecar)
 
 if __name__ == "__main__":
     unittest.main()
