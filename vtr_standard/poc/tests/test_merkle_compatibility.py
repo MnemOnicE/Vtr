@@ -35,7 +35,7 @@ class TestMerkleCompatibility(unittest.TestCase):
             else:
                 combined = node1 + node1
 
-            parents.append(hashlib.sha256(combined).digest())
+            parents.append(hashlib.sha256(b'\x01' + combined).digest())
 
         # Recursively compute until we reach a single root, then convert to hex
         res = self._recursive_compute_root_bytes(parents)
@@ -52,7 +52,7 @@ class TestMerkleCompatibility(unittest.TestCase):
             node1 = leaves[i]
             node2 = leaves[i+1] if i + 1 < len(leaves) else node1
             combined = node1 + node2
-            parents.append(hashlib.sha256(combined).digest())
+            parents.append(hashlib.sha256(b'\x01' + combined).digest())
 
         return self._recursive_compute_root_bytes(parents)
 
@@ -84,7 +84,7 @@ class TestMerkleCompatibility(unittest.TestCase):
 
             for leaves in test_cases:
                 # Pre-hash the leaves to simulate _compute_leaves output
-                hashed_leaves = [hashlib.sha256(l).digest() for l in leaves]
+                hashed_leaves = [hashlib.sha256(b'\x00' + l).digest() for l in leaves] if leaves else [hashlib.sha256(b'\x00').digest()]
 
                 # Calculate using old recursive logic
                 expected_root = self._recursive_compute_root_bytes(hashed_leaves).hex()

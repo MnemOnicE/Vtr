@@ -81,10 +81,10 @@ class MerkleTree:
         streamer = AsyncFileStream(self.file_path, self.chunk_size)
 
         for chunk in streamer.stream():
-            hashes.append(hashlib.sha256(chunk).digest())
+            hashes.append(hashlib.sha256(b'\x00' + chunk).digest())
 
         if not hashes:
-            return [hashlib.sha256(b"").digest()]
+            return [hashlib.sha256(b'\x00').digest()]
 
         return hashes
 
@@ -102,7 +102,7 @@ class MerkleTree:
                 node2 = current_level[i+1] if i + 1 < len(current_level) else node1
 
                 combined = node1 + node2
-                parents.append(hashlib.sha256(combined).digest())
+                parents.append(hashlib.sha256(b'\x01' + combined).digest())
             current_level = parents
 
         # Final result is returned as a hex string for public API compatibility
