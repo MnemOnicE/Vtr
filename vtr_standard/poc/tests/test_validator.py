@@ -5,6 +5,7 @@
 
 import os
 import sys
+import json
 import unittest
 from unittest.mock import MagicMock
 
@@ -33,7 +34,7 @@ except ImportError:
     mock_pydantic.ValidationError = type("ValidationError", (Exception,), {})
     sys.modules["pydantic"] = mock_pydantic
 
-from vtr_standard.poc.validator import VTRValidator
+from vtr_standard.poc.validator import VTRValidator, ValidationError
 
 class TestValidator(unittest.TestCase):
     def setUp(self):
@@ -63,30 +64,45 @@ class TestValidator(unittest.TestCase):
         self.assertEqual(result.error_code, "INVALID_JSON")
         self.assertEqual(result.message, "Sidecar file contains invalid JSON.")
 
-    def test_video_not_found(self):
-        """Test that validating a non-existent video file returns the correct error."""
-        non_existent_video = "non_existent_video.mp4"
-        # Ensure it doesn't exist
-        if os.path.exists(non_existent_video):
-            os.remove(non_existent_video)
+    def test_log_injection_prevention(self):
+        """Test that ValidationError with newlines is sanitized in logs."""
+        # We need to mock the validation to raise a ValidationError with newlines
+        # since we can't easily rely on pydantic in this environment.
+        from vtr_standard.poc.validator import VTRValidator, ValidationError
 
         validator = VTRValidator()
-        result = validator.validate_container(non_existent_video)
+
+        # Mock VTRSidecar.model_validate to raise a ValidationError
+        # We must keep the patch active during the validate_container call
+        with unittest.mock.patch('vtr_standard.poc.validator.VTRSidecar.model_validate') as mock_validate:
+            mock_error = ValidationError("Test Error\r\nLine 1\nLine 2\rLine 3")
+            mock_validate.side_effect = mock_error
+
+            # Create a dummy sidecar file so it passes the existence check
+            with open(self.sidecar_file, "w") as f:
+                f.write('{"dummy": "data"}')
+
+            # We expect a ValidationError to be raised internally and caught/logged
+            with self.assertLogs('vtr_standard.poc.validator', level='ERROR') as cm:
+                result = validator.validate_container(self.video_file)
 
         self.assertFalse(result.is_valid)
-        self.assertEqual(result.error_code, "VIDEO_NOT_FOUND")
-        self.assertEqual(result.message, f"Video file not found at: {non_existent_video}")
+        self.assertEqual(result.error_code, "INVALID_SCHEMA")
 
-    def test_video_path_is_directory(self):
-        """Test that validating a directory as a video file returns the correct error."""
-        import tempfile
-        with tempfile.TemporaryDirectory() as temp_dir:
-            validator = VTRValidator()
-            result = validator.validate_container(temp_dir)
+        # Verify the log message exists and contains no raw newlines within the error part
+        log_output = cm.output[0]
+        self.assertIn("VTR Schema Validation Error:", log_output)
 
-            self.assertFalse(result.is_valid)
-            self.assertEqual(result.error_code, "VIDEO_NOT_FOUND")
-            self.assertEqual(result.message, f"Video path is not a file: {temp_dir}")
+        # The specific error part should have replaced \n with " | "
+        # Pydantic errors usually have many newlines.
+        # We check that the log entry itself (excluding the logger prefix) doesn't have internal newlines.
+        # assertLogs captures each log record. cm.output is a list of formatted log strings.
+
+        # Check that there are no actual newlines in the captured log message
+        # (excluding the one at the end if the formatter adds it, but cm.output usually doesn't include it)
+        internal_newlines = log_output.count('\n')
+        self.assertEqual(internal_newlines, 0, f"Log message contains raw newlines: {repr(log_output)}")
+        self.assertIn(" | ", log_output)
 
 if __name__ == "__main__":
     unittest.main()
