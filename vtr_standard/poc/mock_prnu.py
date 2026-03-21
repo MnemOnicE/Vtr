@@ -37,9 +37,13 @@ class MockPRNU:
         # Check env var for deterministic override: VTR_TEST_GPS
         self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
 
+        # Performance Optimization: Pre-calculate and cache static values
+        self._cached_public_key = hashlib.sha256(self.sensor_id.encode()).hexdigest()
+        self._cached_location_block_hash = hashlib.sha256(self.gps_salt.encode()).hexdigest()
+
     def get_public_key(self):
         """Derives a simulated Public Verification Key from the sensor ID."""
-        return hashlib.sha256(self.sensor_id.encode()).hexdigest()
+        return self._cached_public_key
 
     def _hash_video_content(self, video_path):
         """Calculates the Merkle Root of the video file content."""
@@ -97,7 +101,7 @@ class MockPRNU:
 
     def calculate_location_block_hash(self):
         """Calculates the hash of the location data (salted)."""
-        return hashlib.sha256(self.gps_salt.encode()).hexdigest()
+        return self._cached_location_block_hash
 
     def _calculate_semantic_score(self):
         """Simulates AI analysis of scene complexity for economic data."""
