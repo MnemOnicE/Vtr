@@ -63,5 +63,30 @@ class TestValidator(unittest.TestCase):
         self.assertEqual(result.error_code, "INVALID_JSON")
         self.assertEqual(result.message, "Sidecar file contains invalid JSON.")
 
+    def test_video_not_found(self):
+        """Test that validating a non-existent video file returns the correct error."""
+        non_existent_video = "non_existent_video.mp4"
+        # Ensure it doesn't exist
+        if os.path.exists(non_existent_video):
+            os.remove(non_existent_video)
+
+        validator = VTRValidator()
+        result = validator.validate_container(non_existent_video)
+
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, "VIDEO_NOT_FOUND")
+        self.assertEqual(result.message, f"Video file not found at: {non_existent_video}")
+
+    def test_video_path_is_directory(self):
+        """Test that validating a directory as a video file returns the correct error."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp_dir:
+            validator = VTRValidator()
+            result = validator.validate_container(temp_dir)
+
+            self.assertFalse(result.is_valid)
+            self.assertEqual(result.error_code, "VIDEO_NOT_FOUND")
+            self.assertEqual(result.message, f"Video path is not a file: {temp_dir}")
+
 if __name__ == "__main__":
     unittest.main()
