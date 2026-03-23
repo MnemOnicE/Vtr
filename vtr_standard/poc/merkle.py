@@ -84,7 +84,7 @@ class MerkleTree:
             hashes.append(hashlib.sha256(b'\x00' + chunk).digest())
 
         if not hashes:
-            return [hashlib.sha256(b'\x00').digest()]
+            return [hashlib.sha256(b'\x00' + b'').digest()]
 
         return hashes
 
