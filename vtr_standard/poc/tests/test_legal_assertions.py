@@ -66,37 +66,22 @@ class TestLegalAssertions(unittest.TestCase):
         os.environ.pop("VTR_TEST_LIVENESS", None)
         os.environ.pop("VTR_TEST_GPS", None)
 
-    def test_ai_training_flag_true(self):
+    def test_ai_training_flag(self):
         """
-        Verify that allow_ai_training=True results in x_vtr_ai_training=True in the sidecar JSON.
+        Verify that the allow_ai_training flag is correctly set in the sidecar JSON.
         """
-        self.container.create_sidecar(allow_ai_training=True)
+        for expected_value in [True, False]:
+            with self.subTest(expected_value=expected_value):
+                # Overwrite the sidecar file on subsequent runs within the same test.
+                self.container.create_sidecar(allow_ai_training=expected_value, overwrite=True)
 
-        # Ensure file exists
-        self.assertTrue(os.path.exists(self.sidecar_path))
+                self.assertTrue(os.path.exists(self.sidecar_path), "Sidecar file was not created.")
 
-        # Read and parse JSON
-        with open(self.sidecar_path, 'r') as f:
-            sidecar_data = json.load(f)
+                with open(self.sidecar_path, 'r') as f:
+                    sidecar_data = json.load(f)
 
-        # Assert the value
-        self.assertTrue(sidecar_data["legal_assertions"]["x_vtr_ai_training"])
-
-    def test_ai_training_flag_false(self):
-        """
-        Verify that allow_ai_training=False results in x_vtr_ai_training=False in the sidecar JSON.
-        """
-        self.container.create_sidecar(allow_ai_training=False)
-
-        # Ensure file exists
-        self.assertTrue(os.path.exists(self.sidecar_path))
-
-        # Read and parse JSON
-        with open(self.sidecar_path, 'r') as f:
-            sidecar_data = json.load(f)
-
-        # Assert the value
-        self.assertFalse(sidecar_data["legal_assertions"]["x_vtr_ai_training"])
+                actual_value = sidecar_data["legal_assertions"]["x_vtr_ai_training"]
+                self.assertEqual(actual_value, expected_value)
 
 if __name__ == "__main__":
     unittest.main()
