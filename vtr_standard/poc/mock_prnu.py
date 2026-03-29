@@ -34,8 +34,24 @@ class MockPRNU:
         self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
 
         # Performance Optimization: Pre-calculate and cache static values
-        self._cached_public_key = hashlib.sha256(self.sensor_id.encode()).hexdigest()
-        self._cached_location_block_hash = hashlib.sha256(self.gps_salt.encode()).hexdigest()
+        # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation instead of simple hashing.
+        # Fixed domain-specific salt to ensure deterministic output for the same sensor/GPS while preventing rainbow tables.
+        kdf_salt = b"vtr_kdf_salt_2025_canonical"
+        iterations = 100000
+
+        self._cached_public_key = hashlib.pbkdf2_hmac(
+            "sha256",
+            self.sensor_id.encode(),
+            kdf_salt,
+            iterations
+        ).hex()
+
+        self._cached_location_block_hash = hashlib.pbkdf2_hmac(
+            "sha256",
+            self.gps_salt.encode(),
+            kdf_salt,
+            iterations
+        ).hex()
 
     def get_public_key(self):
         """Derives a simulated Public Verification Key from the sensor ID."""
