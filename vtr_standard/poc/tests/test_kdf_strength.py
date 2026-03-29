@@ -30,5 +30,29 @@ class TestKDFStrength(unittest.TestCase):
 
         self.assertEqual(prnu1.get_public_key(), prnu2.get_public_key(), "KDF must be deterministic for the same sensor ID")
 
+    def test_kdf_config_via_env_vars(self):
+        import os
+        sensor_id = "config_sensor"
+
+        # Original keys
+        prnu_default = MockPRNU(sensor_id)
+        pk_default = prnu_default.get_public_key()
+
+        # Keys with custom salt
+        os.environ["VTR_KDF_SALT"] = "custom_salt"
+        prnu_custom_salt = MockPRNU(sensor_id)
+        pk_custom_salt = prnu_custom_salt.get_public_key()
+        self.assertNotEqual(pk_default, pk_custom_salt)
+
+        # Keys with custom iterations
+        os.environ["VTR_KDF_ITERATIONS"] = "1000"
+        prnu_custom_iter = MockPRNU(sensor_id)
+        pk_custom_iter = prnu_custom_iter.get_public_key()
+        self.assertNotEqual(pk_custom_salt, pk_custom_iter)
+
+        # Cleanup
+        del os.environ["VTR_KDF_SALT"]
+        del os.environ["VTR_KDF_ITERATIONS"]
+
 if __name__ == "__main__":
     unittest.main()

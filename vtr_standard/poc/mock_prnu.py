@@ -35,9 +35,15 @@ class MockPRNU:
 
         # Performance Optimization: Pre-calculate and cache static values
         # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation instead of simple hashing.
-        # Fixed domain-specific salt to ensure deterministic output for the same sensor/GPS while preventing rainbow tables.
-        kdf_salt = b"vtr_kdf_salt_2025_canonical"
-        iterations = 100000
+        # Default domain-specific salt and iterations ensure deterministic output while preventing rainbow tables.
+        # These are configurable via environment variables for future-proofing.
+        env_salt = os.environ.get("VTR_KDF_SALT")
+        kdf_salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
+
+        try:
+            iterations = int(os.environ.get("VTR_KDF_ITERATIONS", 100000))
+        except ValueError:
+            iterations = 100000
 
         self._cached_public_key = hashlib.pbkdf2_hmac(
             "sha256",
