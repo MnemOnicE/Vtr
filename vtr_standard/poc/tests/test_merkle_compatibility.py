@@ -16,31 +16,6 @@ class TestMerkleCompatibility(unittest.TestCase):
     identical results to the legacy recursive logic.
     """
 
-    def _recursive_compute_root(self, leaves: List[bytes]) -> str:
-        """
-        The legacy recursive implementation for comparison.
-        Updated to use bytes internally to match the optimized iterative logic.
-        """
-        if not leaves:
-            return ""
-        if len(leaves) == 1:
-            return leaves[0].hex()
-
-        parents = []
-        for i in range(0, len(leaves), 2):
-            node1 = leaves[i]
-            if i + 1 < len(leaves):
-                node2 = leaves[i+1]
-                combined = node1 + node2
-            else:
-                combined = node1 + node1
-
-            parents.append(hashlib.sha256(b'\x01' + combined).digest())
-
-        # Recursively compute until we reach a single root, then convert to hex
-        res = self._recursive_compute_root_bytes(parents)
-        return res.hex() if res else ""
-
     def _recursive_compute_root_bytes(self, leaves: List[bytes]) -> bytes:
         if not leaves:
             return b""
