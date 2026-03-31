@@ -16,7 +16,10 @@ except ImportError:
     class MockBaseModel:
         def __init__(self, **kwargs):
             for k, v in kwargs.items():
-                setattr(self, k, v)
+                if isinstance(v, dict):
+                    setattr(self, k, MockBaseModel(**v))
+                else:
+                    setattr(self, k, v)
         @classmethod
         def model_validate(cls, data):
             return cls(**data)
@@ -103,6 +106,137 @@ class TestValidator(unittest.TestCase):
         internal_newlines = log_output.count('\n')
         self.assertEqual(internal_newlines, 0, f"Log message contains raw newlines: {repr(log_output)}")
         self.assertIn(" | ", log_output)
+
+    def test_video_not_found(self):
+        """Test that validating a non-existent video returns VIDEO_NOT_FOUND."""
+        validator = VTRValidator()
+        result = validator.validate_container("non_existent_video.mp4")
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, "VIDEO_NOT_FOUND")
+        self.assertIn("Video file not found at", result.message)
+
+    def test_video_is_directory(self):
+        """Test that validating a directory path as video returns VIDEO_NOT_FOUND."""
+        dir_path = "test_dir"
+        os.makedirs(dir_path, exist_ok=True)
+        try:
+            validator = VTRValidator()
+            result = validator.validate_container(dir_path)
+            self.assertFalse(result.is_valid)
+            self.assertEqual(result.error_code, "VIDEO_NOT_FOUND")
+            self.assertIn("Video path is not a file", result.message)
+        finally:
+            os.rmdir(dir_path)
+
+    def test_sidecar_not_found(self):
+        """Test that validating a video with missing sidecar returns SIDECAR_NOT_FOUND."""
+        # video_file is created in setUp, but sidecar is not
+        validator = VTRValidator()
+        result = validator.validate_container(self.video_file)
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, "SIDECAR_NOT_FOUND")
+        self.assertIn("Sidecar file not found at", result.message)
+
+    def test_sidecar_read_error(self):
+        """Test that a generic read failure returns READ_ERROR."""
+        # Create a sidecar file so it passes the existence check
+        with open(self.sidecar_file, "w") as f:
+            f.write('{"dummy": "data"}')
+
+        validator = VTRValidator()
+        with unittest.mock.patch("vtr_standard.poc.validator.open", side_effect=OSError("Disk error")):
+            with self.assertLogs("vtr_standard.poc.validator", level="ERROR") as cm:
+                result = validator.validate_container(self.video_file)
+
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, "READ_ERROR")
+        self.assertEqual(result.message, "An error occurred while reading or parsing the sidecar file.")
+        self.assertIn("VTR Sidecar Read Error", cm.output[0])
+
+    def _create_valid_sidecar_dict(self, merkle_root="correct_root", liveness=True):
+        return {
+            "vtr_version": "2.2",
+            "hardware_signature": {
+                "public_key": "test_pubkey",
+                "zk_proof": "test_proof",
+                "liveness_flag": liveness,
+                "timestamp": 1234567890.0,
+                "merkle_root": merkle_root,
+                "location_block_hash": "test_loc",
+                "nonce": "test_nonce",
+                "previous_signature_link": None
+            },
+            "legal_assertions": {
+                "x_vtr_ai_training": False,
+                "copyright_notice": "test notice"
+            }
+        }
+
+    def test_merkle_mismatch(self):
+        """Test that a mismatched Merkle root returns MERKLE_MISMATCH."""
+        sidecar_data = self._create_valid_sidecar_dict(merkle_root="mismatched_root")
+        with open(self.sidecar_file, "w") as f:
+            json.dump(sidecar_data, f)
+
+        validator = VTRValidator()
+        with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU._static_hash_video_content", return_value="actual_root"):
+            with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.verify_zk_proof", return_value=True):
+                result = validator.validate_container(self.video_file)
+
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, "MERKLE_MISMATCH")
+        self.assertIn("Sidecar Merkle Root does not match actual video Merkle Root", result.message)
+
+    def test_liveness_failure(self):
+        """Test that a failed liveness check returns LIVENESS_FAILURE."""
+        sidecar_data = self._create_valid_sidecar_dict(liveness=False)
+        # Ensure merkle root matches to get past that check
+        sidecar_data["hardware_signature"]["merkle_root"] = "actual_root"
+        with open(self.sidecar_file, "w") as f:
+            json.dump(sidecar_data, f)
+
+        validator = VTRValidator()
+        with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU._static_hash_video_content", return_value="actual_root"):
+            with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.verify_zk_proof", return_value=True):
+                result = validator.validate_container(self.video_file)
+
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, "LIVENESS_FAILURE")
+        self.assertIn("Hardware liveness check failed", result.message)
+
+    def test_invalid_signature(self):
+        """Test that an invalid ZK proof returns INVALID_SIGNATURE."""
+        sidecar_data = self._create_valid_sidecar_dict()
+        with open(self.sidecar_file, "w") as f:
+            json.dump(sidecar_data, f)
+
+        validator = VTRValidator()
+        # Mock verify_zk_proof to return False
+        with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.verify_zk_proof", return_value=False):
+            # Mock calculate_expected_proof for the error details
+            with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.calculate_expected_proof", return_value="expected_proof"):
+                result = validator.validate_container(self.video_file)
+
+        self.assertFalse(result.is_valid)
+        self.assertEqual(result.error_code, "INVALID_SIGNATURE")
+        self.assertIn("Cryptographic proof verification failed", result.message)
+        self.assertEqual(result.details["proof_expected"], "expected_proof")
+
+    def test_validate_container_success(self):
+        """Test the happy path: successful validation."""
+        sidecar_data = self._create_valid_sidecar_dict(merkle_root="actual_root")
+        with open(self.sidecar_file, "w") as f:
+            json.dump(sidecar_data, f)
+
+        validator = VTRValidator()
+        with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU._static_hash_video_content", return_value="actual_root"):
+            with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.verify_zk_proof", return_value=True):
+                result = validator.validate_container(self.video_file)
+
+        self.assertTrue(result.is_valid)
+        self.assertEqual(result.message, "VTR container is valid.")
+        self.assertEqual(result.details["merkle_root"], "actual_root")
+        self.assertTrue(result.details["liveness"])
 
 if __name__ == "__main__":
     unittest.main()
