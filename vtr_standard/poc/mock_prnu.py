@@ -5,6 +5,7 @@
 
 import hashlib
 import hmac
+import json
 import os
 import random
 from typing import Optional
@@ -142,19 +143,33 @@ class MockPRNU:
         Returns:
             str: The expected zk_proof string.
         """
-        # Optimization: Use "|".join() for faster concatenation.
-        # We cast liveness_flag (bool) to lowercase string for consistent hashing.
-        data_to_sign = "|".join([
-            public_key,
-            str(timestamp),
-            video_hash,
-            "true" if liveness_flag else "false",
-            location_block_hash,
-            nonce,
-            previous_signature or ""
-        ])
+        # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation instead of simple hashing.
+        # This prevents canonicalization attacks and provides domain separation.
+        # We use JSON serialization with sort_keys=True for deterministic payload construction.
+        env_salt = os.environ.get("VTR_KDF_SALT")
+        kdf_salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
 
-        proof_hash = hashlib.sha256(data_to_sign.encode()).hexdigest()
+        try:
+            iterations = int(os.environ.get("VTR_KDF_ITERATIONS", 100000))
+        except ValueError:
+            iterations = 100000
+
+        data_to_sign = json.dumps({
+            "public_key": public_key,
+            "video_hash": video_hash,
+            "timestamp": timestamp,
+            "liveness_flag": liveness_flag,
+            "location_block_hash": location_block_hash,
+            "nonce": nonce,
+            "previous_signature": previous_signature
+        }, sort_keys=True)
+
+        proof_hash = hashlib.pbkdf2_hmac(
+            "sha256",
+            data_to_sign.encode(),
+            kdf_salt,
+            iterations
+        ).hex()
         return f"zk_snark_{proof_hash[:16]}"
 
     @staticmethod
