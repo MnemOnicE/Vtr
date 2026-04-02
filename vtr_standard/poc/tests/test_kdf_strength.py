@@ -1,5 +1,6 @@
 import unittest
 import hashlib
+import os
 from vtr_standard.poc.mock_prnu import MockPRNU
 
 class TestKDFStrength(unittest.TestCase):
@@ -15,13 +16,17 @@ class TestKDFStrength(unittest.TestCase):
 
     def test_location_hash_is_not_simple_hash(self):
         gps_salt = "34.0522,118.2437"
-        simple_hash = hashlib.sha256(gps_salt.encode()).hexdigest()
+        os.environ["VTR_TEST_GPS"] = gps_salt
+        try:
+            simple_hash = hashlib.sha256(gps_salt.encode()).hexdigest()
 
-        prnu = MockPRNU("test_sensor")
-        derived_lh = prnu.calculate_location_block_hash()
+            prnu = MockPRNU("test_sensor")
+            derived_lh = prnu.calculate_location_block_hash()
 
-        self.assertNotEqual(derived_lh, simple_hash, "Location hash should not be a simple SHA256 hash of the GPS salt")
-        self.assertEqual(len(derived_lh), 64, "Location hash should be a 64-character hex string (SHA256)")
+            self.assertNotEqual(derived_lh, simple_hash, "Location hash should not be a simple SHA256 hash of the GPS salt")
+            self.assertEqual(len(derived_lh), 64, "Location hash should be a 64-character hex string (SHA256)")
+        finally:
+            del os.environ["VTR_TEST_GPS"]
 
     def test_kdf_is_deterministic(self):
         sensor_id = "deterministic_sensor"
@@ -31,7 +36,6 @@ class TestKDFStrength(unittest.TestCase):
         self.assertEqual(prnu1.get_public_key(), prnu2.get_public_key(), "KDF must be deterministic for the same sensor ID")
 
     def test_kdf_config_via_env_vars(self):
-        import os
         sensor_id = "config_sensor"
 
         # Original keys
