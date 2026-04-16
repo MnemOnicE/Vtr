@@ -146,8 +146,7 @@ class VTRValidator:
                     error_code="MERKLE_MISMATCH",
                     message="Sidecar Merkle Root does not match actual video Merkle Root.",
                     details={
-                        "sidecar_root": sidecar_merkle_root,
-                        "actual_root": actual_merkle_root
+                        "sidecar_root": sidecar_merkle_root
                     }
                 )
 
@@ -179,18 +178,6 @@ class VTRValidator:
                 details=details
             )
         else:
-            # Enhanced debugging for failed signatures
-            # We provide the values that were found/calculated to help diagnose why verification failed.
-            expected_proof = MockPRNU.calculate_expected_proof(
-                public_key=public_key,
-                video_hash=actual_merkle_root,
-                timestamp=timestamp,
-                liveness_flag=liveness_flag,
-                location_block_hash=location_block_hash,
-                nonce=nonce,
-                previous_signature=previous_signature
-            )
-
             return VerificationResult(
                 is_valid=False,
                 error_code="INVALID_SIGNATURE",
@@ -199,11 +186,9 @@ class VTRValidator:
                     "timestamp_claimed": timestamp,
                     "liveness_claimed": liveness_flag,
                     "location_hash_claimed": location_block_hash,
-                    "actual_merkle_root_calculated": actual_merkle_root,
                     "nonce": nonce,
                     "public_key": public_key,
                     "previous_signature_link": previous_signature,
-                    "proof_received": zk_proof,
-                    "proof_expected": expected_proof
+                    "proof_received": zk_proof
                 }
             )
