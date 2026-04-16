@@ -34,11 +34,16 @@ class MockPRNU:
         self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
 
         # Performance Optimization: Pre-calculate and cache static values
-        # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation instead of simple hashing.
-        # Default domain-specific salt and iterations ensure deterministic output while preventing rainbow tables.
-        # These are configurable via environment variables for future-proofing.
+        # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation.
+        # Enforce environment-based salt to prevent hardcoded fallback vulnerabilities.
         env_salt = os.environ.get("VTR_KDF_SALT")
-        kdf_salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
+        if not env_salt:
+            raise RuntimeError(
+                "CRITICAL SECURITY REQUIREMENT: VTR_KDF_SALT environment variable is missing. "
+                "For security, a unique, non-hardcoded salt must be provided for key derivation. "
+                "In development/testing, you can set this to a dummy value (e.g., export VTR_KDF_SALT='mock_salt')."
+            )
+        kdf_salt = env_salt.encode()
 
         try:
             iterations = int(os.environ.get("VTR_KDF_ITERATIONS", 100000))
