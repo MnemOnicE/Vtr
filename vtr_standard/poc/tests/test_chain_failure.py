@@ -4,7 +4,6 @@ import os
 import json
 import logging
 from vtr_standard.poc.vtr_container import VTRContainer
-from vtr_standard.poc.schemas import VTRSidecar
 
 # Disable logging for tests
 logging.getLogger("vtr_standard.poc.vtr_container").setLevel(logging.CRITICAL)
