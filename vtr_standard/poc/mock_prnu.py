@@ -12,6 +12,10 @@ from typing import Optional
 
 from .merkle import MerkleTree
 
+# KDF Defaults for PBKDF2-HMAC-SHA256
+VTR_DEFAULT_KDF_ITERATIONS = 100000
+VTR_DEFAULT_KDF_SALT = b"vtr_kdf_salt_2025_canonical"
+
 class MockPRNU:
     """Simulates the Hardware Root of Trust and PRNU (Photo Response Non-Uniformity) logic.
 
@@ -39,12 +43,12 @@ class MockPRNU:
         # Default domain-specific salt and iterations ensure deterministic output while preventing rainbow tables.
         # These are configurable via environment variables for future-proofing.
         env_salt = os.environ.get("VTR_KDF_SALT")
-        kdf_salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
+        kdf_salt = env_salt.encode() if env_salt else VTR_DEFAULT_KDF_SALT
 
         try:
-            iterations = int(os.environ.get("VTR_KDF_ITERATIONS", 100000))
+            iterations = int(os.environ.get("VTR_KDF_ITERATIONS", VTR_DEFAULT_KDF_ITERATIONS))
         except ValueError:
-            iterations = 100000
+            iterations = VTR_DEFAULT_KDF_ITERATIONS
 
         self._cached_public_key = hashlib.pbkdf2_hmac(
             "sha256",
@@ -147,12 +151,12 @@ class MockPRNU:
         # This prevents canonicalization attacks and provides domain separation.
         # We use JSON serialization with sort_keys=True for deterministic payload construction.
         env_salt = os.environ.get("VTR_KDF_SALT")
-        kdf_salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
+        kdf_salt = env_salt.encode() if env_salt else VTR_DEFAULT_KDF_SALT
 
         try:
-            iterations = int(os.environ.get("VTR_KDF_ITERATIONS", 100000))
+            iterations = int(os.environ.get("VTR_KDF_ITERATIONS", VTR_DEFAULT_KDF_ITERATIONS))
         except ValueError:
-            iterations = 100000
+            iterations = VTR_DEFAULT_KDF_ITERATIONS
 
         data_to_sign = json.dumps({
             "public_key": public_key,
