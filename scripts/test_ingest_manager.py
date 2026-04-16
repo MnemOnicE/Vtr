@@ -10,7 +10,7 @@ import sys
 import os
 
 # Add scripts directory to path to import ingest_manager
-sys.path.append(os.path.join(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from ingest_manager import get_commit_count
 
 class TestIngestManager(unittest.TestCase):
