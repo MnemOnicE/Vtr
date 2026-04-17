@@ -59,7 +59,8 @@ class TestMockPRNU(unittest.TestCase):
 
         # 3. Test fallback logic when env var is not set
         # Ensure env var is absent
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ):
+            os.environ.pop("VTR_TEST_LIVENESS", None)
             # We must also ensure other required env vars for MockPRNU init are present if needed,
             # but here we already have the prnu instance.
             # However, check_liveness reads os.environ directly.
