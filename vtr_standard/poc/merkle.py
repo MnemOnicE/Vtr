@@ -81,7 +81,8 @@ class MerkleTree:
         streamer = AsyncFileStream(self.file_path, self.chunk_size)
 
         for chunk in streamer.stream():
-            h = hashlib.sha256(b'\x00')
+            h = hashlib.sha256()
+            h.update(b'\x00')
             h.update(chunk)
             hashes.append(h.digest())
 
@@ -103,6 +104,11 @@ class MerkleTree:
                 # Handle odd number of leaves by duplicating the last one
                 node2 = current_level[i+1] if i + 1 < len(current_level) else node1
 
+                h = hashlib.sha256()
+                h.update(b'\x01')
+                h.update(node1)
+                h.update(node2)
+                parents.append(h.digest())
                 parents.append(hashlib.sha256(b'\x01' + node1 + node2).digest())
             current_level = parents
 
