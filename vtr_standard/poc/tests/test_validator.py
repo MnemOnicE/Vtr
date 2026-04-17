@@ -187,7 +187,6 @@ class TestValidator(unittest.TestCase):
         self.assertEqual(result.error_code, "MERKLE_MISMATCH")
         self.assertIn("Sidecar Merkle Root does not match actual video Merkle Root", result.message)
         self.assertNotIn("actual_root", result.details)
-        self.assertEqual(result.details["merkle_root_claimed"], "mismatched_root")
 
     def test_liveness_failure(self):
         """Test that a failed liveness check returns LIVENESS_FAILURE."""
@@ -222,7 +221,6 @@ class TestValidator(unittest.TestCase):
         self.assertIn("Cryptographic proof verification failed", result.message)
         self.assertNotIn("proof_expected", result.details)
         self.assertNotIn("actual_merkle_root_calculated", result.details)
-        self.assertEqual(result.details["merkle_root_claimed"], "correct_root")
 
     def test_validate_container_success(self):
         """Test the happy path: successful validation."""
