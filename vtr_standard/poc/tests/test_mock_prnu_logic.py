@@ -37,7 +37,8 @@ class TestMockPRNU(unittest.TestCase):
                 os.remove("test.mp4")
 
     def test_check_liveness_logic(self):
-        prnu = MockPRNU("sensor_123")
+        with patch.dict(os.environ, {"VTR_ENV": "TESTING"}):
+            prnu = MockPRNU("sensor_123")
 
         # 1. Test environment variable overrides (True cases)
         true_values = ["true", "1", "pass", "TRUE", "Pass", "TrUe"]
