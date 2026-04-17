@@ -187,6 +187,7 @@ class TestValidator(unittest.TestCase):
         self.assertEqual(result.error_code, "MERKLE_MISMATCH")
         self.assertIn("Sidecar Merkle Root does not match actual video Merkle Root", result.message)
         self.assertNotIn("actual_root", result.details)
+        self.assertEqual(result.details["merkle_root_claimed"], "mismatched_root")
 
     def test_liveness_failure(self):
         """Test that a failed liveness check returns LIVENESS_FAILURE."""
