@@ -14,9 +14,9 @@ import os
 import sys
 
 # Ensure the scripts directory is in the path so we can import ingest_manager
-scripts_dir = os.path.dirname(os.path.abspath(__file__))
-if scripts_dir not in sys.path:
-    sys.path.insert(0, scripts_dir)
+import sys
+# Assuming the project structure allows importing from the root or a standard package path
+from scripts import ingest_manager
 
 import ingest_manager
 
