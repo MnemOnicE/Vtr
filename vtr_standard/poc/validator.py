@@ -146,6 +146,7 @@ class VTRValidator:
                     error_code="MERKLE_MISMATCH",
                     message="Sidecar Merkle Root does not match actual video Merkle Root.",
                     details={
+                        "sidecar_root": sidecar_merkle_root
                         "merkle_root_claimed": sidecar_merkle_root,
                     }
                 )
@@ -186,6 +187,7 @@ class VTRValidator:
                     "timestamp_claimed": timestamp,
                     "liveness_claimed": liveness_flag,
                     "location_hash_claimed": location_block_hash,
+                    "merkle_root_claimed": hw_sig.merkle_root,
                     "nonce": nonce,
                     "public_key": public_key,
                     "previous_signature_link": previous_signature,

@@ -217,9 +217,7 @@ class TestValidator(unittest.TestCase):
         validator = VTRValidator()
         # Mock verify_zk_proof to return False
         with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.verify_zk_proof", return_value=False):
-            # Mock calculate_expected_proof for the error details
-            with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.calculate_expected_proof", return_value="expected_proof"):
-                result = validator.validate_container(self.video_file)
+            result = validator.validate_container(self.video_file)
 
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "INVALID_SIGNATURE")
