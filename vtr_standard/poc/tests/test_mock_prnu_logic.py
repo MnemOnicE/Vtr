@@ -32,5 +32,16 @@ class TestMockPRNU(unittest.TestCase):
         # Cleanup
         os.remove("test.mp4")
 
+    def test_random_gps_salt(self):
+        """Verify that GPS salt is random when VTR_TEST_GPS is not set."""
+        if "VTR_TEST_GPS" in os.environ:
+            del os.environ["VTR_TEST_GPS"]
+
+        prnu1 = MockPRNU("sensor_1")
+        prnu2 = MockPRNU("sensor_1")
+
+        self.assertNotEqual(prnu1.gps_salt, prnu2.gps_salt)
+        self.assertEqual(len(prnu1.gps_salt), 32) # hex of 16 bytes
+
 if __name__ == "__main__":
     unittest.main()

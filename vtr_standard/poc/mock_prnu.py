@@ -31,7 +31,8 @@ class MockPRNU:
 
         # Mock GPS Block used for location hashing.
         # Check env var for deterministic override: VTR_TEST_GPS
-        self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
+        # SECURITY FIX: Generate a random salt if not provided via environment.
+        self.gps_salt = os.environ.get("VTR_TEST_GPS") or os.urandom(16).hex()
 
         # Performance Optimization: Pre-calculate and cache static values
         # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation.
