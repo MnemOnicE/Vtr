@@ -35,6 +35,7 @@ class MockPRNU:
         self.gps_salt = os.environ.get("VTR_TEST_GPS") or os.urandom(16).hex()
 
         # Performance Optimization: Pre-calculate and cache static values
+        kdf_salt, iterations = self._get_kdf_params()
         # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation.
         # Enforce environment-based salt to prevent hardcoded fallback vulnerabilities.
         env_salt = os.environ.get("VTR_KDF_SALT")
@@ -64,6 +65,22 @@ class MockPRNU:
             kdf_salt,
             iterations
         ).hex()
+
+    @staticmethod
+    def _get_kdf_params():
+        """Retrieves KDF salt and iterations from environment variables."""
+        # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation instead of simple hashing.
+        # Default domain-specific salt and iterations ensure deterministic output while preventing rainbow tables.
+        # These are configurable via environment variables for future-proofing.
+        env_salt = os.environ.get("VTR_KDF_SALT")
+        kdf_salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
+
+        try:
+            iterations = max(1, int(os.environ.get("VTR_KDF_ITERATIONS", 100000)))
+        except ValueError:
+            iterations = 100000
+
+        return kdf_salt, iterations
 
     def get_public_key(self):
         """Derives a simulated Public Verification Key from the sensor ID."""
@@ -160,7 +177,13 @@ class MockPRNU:
             previous_signature or ""
         ])
 
-        proof_hash = hashlib.sha256(data_to_sign.encode()).hexdigest()
+        kdf_salt, iterations = MockPRNU._get_kdf_params()
+        proof_hash = hashlib.pbkdf2_hmac(
+            "sha256",
+            data_to_sign.encode(),
+            kdf_salt,
+            iterations
+        ).hex()
         return f"zk_snark_{proof_hash[:16]}"
 
     @staticmethod
