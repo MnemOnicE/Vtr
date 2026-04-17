@@ -53,11 +53,6 @@ pip install .
 
 This will install the required dependencies (including `pydantic`).
 
-## Performance Benchmarks
-
-The VTR standard is optimized for high throughput and low memory footprint. We track our performance metrics and improvements over time.
-For detailed measurements of our optimizations (like eliminating 100% of memory allocation overhead in our Merkle Tree hashing), please see our [Benchmarks Log](BENCHMARKS.md).
-
 ## Usage Guide
 
 ### Running the CLI

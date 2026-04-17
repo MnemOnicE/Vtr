@@ -6,6 +6,7 @@
 import argparse
 import sys
 import json
+import os
 import logging
 from .vtr_container import VTRContainer
 from .validator import VTRValidator
