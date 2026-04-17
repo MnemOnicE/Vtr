@@ -31,10 +31,26 @@ class MockPRNU:
 
         # Mock GPS Block used for location hashing.
         # Check env var for deterministic override: VTR_TEST_GPS
-        self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
+        # SECURITY FIX: Generate a random salt if not provided via environment.
+        self.gps_salt = os.environ.get("VTR_TEST_GPS") or os.urandom(16).hex()
 
         # Performance Optimization: Pre-calculate and cache static values
         kdf_salt, iterations = self._get_kdf_params()
+        # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation.
+        # Enforce environment-based salt to prevent hardcoded fallback vulnerabilities.
+        env_salt = os.environ.get("VTR_KDF_SALT")
+        if not env_salt:
+            raise RuntimeError(
+                "CRITICAL SECURITY REQUIREMENT: VTR_KDF_SALT environment variable is missing. "
+                "For security, a unique, non-hardcoded salt must be provided for key derivation. "
+                "In development/testing, you can set this to a dummy value (e.g., export VTR_KDF_SALT='mock_salt')."
+            )
+        kdf_salt = env_salt.encode()
+
+        try:
+            iterations = int(os.environ.get("VTR_KDF_ITERATIONS", 100000))
+        except ValueError:
+            iterations = 100000
 
         self._cached_public_key = hashlib.pbkdf2_hmac(
             "sha256",

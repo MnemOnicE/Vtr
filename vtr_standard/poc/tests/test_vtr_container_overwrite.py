@@ -41,6 +41,7 @@ class TestVTRContainerOverwrite(unittest.TestCase):
     """
 
     def setUp(self):
+        os.environ["VTR_KDF_SALT"] = "test_overwrite_salt"
         self.video_path = "test_overwrite.mp4"
         self.sidecar_path = f"{self.video_path}.vtr.json"
         # Create a dummy video file
@@ -54,6 +55,8 @@ class TestVTRContainerOverwrite(unittest.TestCase):
             os.remove(self.video_path)
         if os.path.exists(self.sidecar_path):
             os.remove(self.sidecar_path)
+        if "VTR_KDF_SALT" in os.environ:
+            del os.environ["VTR_KDF_SALT"]
 
     def test_create_sidecar_raises_if_exists_and_no_overwrite(self):
         """
