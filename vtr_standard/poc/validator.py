@@ -189,6 +189,6 @@ class VTRValidator:
                     "nonce": nonce,
                     "public_key": public_key,
                     "previous_signature_link": previous_signature,
-                    "proof_received": zk_proof
+                    "proof_received": zk_proof,
                 }
             )
