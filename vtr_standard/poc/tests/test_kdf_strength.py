@@ -5,6 +5,18 @@ from unittest.mock import patch
 from vtr_standard.poc.mock_prnu import MockPRNU
 
 class TestKDFStrength(unittest.TestCase):
+    def setUp(self):
+        import os
+        # Set a default test salt for all tests unless overridden
+        os.environ["VTR_KDF_SALT"] = "test_default_salt"
+
+    def tearDown(self):
+        import os
+        if "VTR_KDF_SALT" in os.environ:
+            del os.environ["VTR_KDF_SALT"]
+        if "VTR_KDF_ITERATIONS" in os.environ:
+            del os.environ["VTR_KDF_ITERATIONS"]
+
     def test_public_key_is_not_simple_hash(self):
         sensor_id = "test_sensor_123"
         simple_hash = hashlib.sha256(sensor_id.encode()).hexdigest()
@@ -36,7 +48,7 @@ class TestKDFStrength(unittest.TestCase):
     def test_kdf_config_via_env_vars(self):
         sensor_id = "config_sensor"
 
-        # Original keys
+        # Original keys (uses setUp salt)
         prnu_default = MockPRNU(sensor_id)
         pk_default = prnu_default.get_public_key()
 

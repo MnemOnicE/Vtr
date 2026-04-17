@@ -11,6 +11,7 @@ logging.getLogger("vtr_standard.poc.vtr_container").setLevel(logging.CRITICAL)
 
 class TestChainFailure(unittest.TestCase):
     def setUp(self):
+        os.environ["VTR_KDF_SALT"] = "test_chain_salt"
         self.video_file = "test_chain_failure_video.mp4"
         with open(self.video_file, "wb") as f:
             f.write(os.urandom(1024))
@@ -26,6 +27,8 @@ class TestChainFailure(unittest.TestCase):
             os.remove(self.bad_sidecar)
         if os.path.exists(f"{self.video_file}.vtr.json"):
             os.remove(f"{self.video_file}.vtr.json")
+        if "VTR_KDF_SALT" in os.environ:
+            del os.environ["VTR_KDF_SALT"]
 
     def test_chain_failure_raises_exception(self):
         """Test that linking to an invalid sidecar raises ValueError."""

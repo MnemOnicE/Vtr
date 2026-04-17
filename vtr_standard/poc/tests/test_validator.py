@@ -41,6 +41,7 @@ from vtr_standard.poc.validator import VTRValidator, ValidationError
 
 class TestValidator(unittest.TestCase):
     def setUp(self):
+        os.environ["VTR_KDF_SALT"] = "test_validator_salt"
         self.video_file = "test_invalid_json_video.mp4"
         self.sidecar_file = f"{self.video_file}.vtr.json"
 
@@ -53,6 +54,8 @@ class TestValidator(unittest.TestCase):
             os.remove(self.video_file)
         if os.path.exists(self.sidecar_file):
             os.remove(self.sidecar_file)
+        if "VTR_KDF_SALT" in os.environ:
+            del os.environ["VTR_KDF_SALT"]
 
     def test_invalid_json_sidecar(self):
         """Test that validating a sidecar with invalid JSON returns the correct error."""

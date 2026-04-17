@@ -132,6 +132,10 @@ class VTRContainer:
 
 if __name__ == "__main__":
     import sys
+    # Set environment variables for deterministic MockPRNU in demo mode
+    if "VTR_KDF_SALT" not in os.environ:
+        os.environ["VTR_KDF_SALT"] = "vtr_demo_salt_2025"
+
     logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='%(message)s')
     logger.info("--- OntoLogics VTR Generator v2.0 (Merged POC) ---")
 

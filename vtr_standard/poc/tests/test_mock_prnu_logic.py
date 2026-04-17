@@ -3,6 +3,13 @@ from vtr_standard.poc.mock_prnu import MockPRNU
 import os
 
 class TestMockPRNU(unittest.TestCase):
+    def setUp(self):
+        os.environ["VTR_KDF_SALT"] = "test_logic_salt"
+
+    def tearDown(self):
+        if "VTR_KDF_SALT" in os.environ:
+            del os.environ["VTR_KDF_SALT"]
+
     def test_proof_generation_and_verification(self):
         # Create a dummy video file
         with open("test.mp4", "wb") as f:
