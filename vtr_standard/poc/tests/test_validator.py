@@ -221,6 +221,7 @@ class TestValidator(unittest.TestCase):
         self.assertIn("Cryptographic proof verification failed", result.message)
         self.assertNotIn("proof_expected", result.details)
         self.assertNotIn("actual_merkle_root_calculated", result.details)
+        self.assertEqual(result.details["merkle_root_claimed"], "correct_root")
 
     def test_validate_container_success(self):
         """Test the happy path: successful validation."""
