@@ -147,6 +147,7 @@ class VTRValidator:
                     message="Sidecar Merkle Root does not match actual video Merkle Root.",
                     details={
                         "sidecar_root": sidecar_merkle_root
+                        "merkle_root_claimed": sidecar_merkle_root,
                     }
                 )
 
