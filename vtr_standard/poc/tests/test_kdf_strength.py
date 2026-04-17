@@ -10,8 +10,9 @@ class TestKDFStrength(unittest.TestCase):
 
     def tearDown(self):
         import os
-        if "VTR_KDF_SALT" in os.environ:
-            del os.environ["VTR_KDF_SALT"]
+        for var in ["VTR_KDF_SALT", "VTR_KDF_ITERATIONS"]:
+            if var in os.environ:
+                del os.environ[var]
 
     def test_public_key_is_not_simple_hash(self):
         sensor_id = "test_sensor_123"
