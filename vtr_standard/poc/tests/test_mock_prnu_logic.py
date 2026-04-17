@@ -5,6 +5,13 @@ import random
 from vtr_standard.poc.mock_prnu import MockPRNU
 
 class TestMockPRNU(unittest.TestCase):
+    def setUp(self):
+        os.environ["VTR_KDF_SALT"] = "test_logic_salt"
+
+    def tearDown(self):
+        if "VTR_KDF_SALT" in os.environ:
+            del os.environ["VTR_KDF_SALT"]
+
     def test_proof_generation_and_verification(self):
         # Create a dummy video file
         with open("test.mp4", "wb") as f:
@@ -71,6 +78,17 @@ class TestMockPRNU(unittest.TestCase):
                 # Case C: Boundary condition
                 mock_uniform.return_value = 0.9
                 self.assertFalse(prnu.check_liveness())
+
+    def test_random_gps_salt(self):
+        """Verify that GPS salt is random when VTR_TEST_GPS is not set."""
+        if "VTR_TEST_GPS" in os.environ:
+            del os.environ["VTR_TEST_GPS"]
+
+        prnu1 = MockPRNU("sensor_1")
+        prnu2 = MockPRNU("sensor_1")
+
+        self.assertNotEqual(prnu1.gps_salt, prnu2.gps_salt)
+        self.assertEqual(len(prnu1.gps_salt), 32) # hex of 16 bytes
 
 if __name__ == "__main__":
     unittest.main()

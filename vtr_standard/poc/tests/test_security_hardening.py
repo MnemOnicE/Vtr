@@ -18,6 +18,7 @@ class TestSecurityHardening(unittest.TestCase):
     SIDECAR_PATH = "test_security.mp4.vtr.json"
 
     def setUp(self):
+        os.environ["VTR_KDF_SALT"] = "test_security_salt"
         # Create dummy video
         with open(self.VIDEO_PATH, "wb") as f:
             f.write(b"Security Test Content")
@@ -28,6 +29,7 @@ class TestSecurityHardening(unittest.TestCase):
         if os.path.exists(self.SIDECAR_PATH): os.remove(self.SIDECAR_PATH)
         # Clear env vars
         if "VTR_TEST_LIVENESS" in os.environ: del os.environ["VTR_TEST_LIVENESS"]
+        if "VTR_KDF_SALT" in os.environ: del os.environ["VTR_KDF_SALT"]
 
     def test_tamper_resistance_liveness(self):
         """Test that modifying liveness_flag invalidates the signature."""
