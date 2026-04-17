@@ -10,9 +10,10 @@ class TestKDFStrength(unittest.TestCase):
 
     def tearDown(self):
         import os
-        for var in ["VTR_KDF_SALT", "VTR_KDF_ITERATIONS"]:
-            if var in os.environ:
-                del os.environ[var]
+        if "VTR_KDF_SALT" in os.environ:
+            del os.environ["VTR_KDF_SALT"]
+        if "VTR_KDF_ITERATIONS" in os.environ:
+            del os.environ["VTR_KDF_ITERATIONS"]
 
     def test_public_key_is_not_simple_hash(self):
         sensor_id = "test_sensor_123"
@@ -61,9 +62,6 @@ class TestKDFStrength(unittest.TestCase):
         pk_custom_iter = prnu_custom_iter.get_public_key()
         self.assertNotEqual(pk_custom_salt, pk_custom_iter)
 
-        # Cleanup
-        if "VTR_KDF_ITERATIONS" in os.environ:
-            del os.environ["VTR_KDF_ITERATIONS"]
 
 if __name__ == "__main__":
     unittest.main()
