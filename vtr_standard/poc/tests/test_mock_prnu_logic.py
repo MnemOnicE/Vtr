@@ -69,6 +69,8 @@ class TestMockPRNU(unittest.TestCase):
                 # Case A: liveness_score > 0.9
                 mock_uniform.return_value = 0.91
                 self.assertTrue(prnu.check_liveness())
+                self.assertTrue(prnu.check_liveness())
+                self.assertEqual(mock_uniform.call_count, 1)
                 mock_uniform.assert_called_with(0.8, 1.0)
 
                 # Case B: liveness_score <= 0.9
