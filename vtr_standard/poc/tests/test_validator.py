@@ -41,6 +41,7 @@ from vtr_standard.poc.validator import VTRValidator, ValidationError
 
 class TestValidator(unittest.TestCase):
     def setUp(self):
+        os.environ["VTR_KDF_SALT"] = "test_validator_salt"
         self.video_file = "test_invalid_json_video.mp4"
         self.sidecar_file = f"{self.video_file}.vtr.json"
 
@@ -53,6 +54,8 @@ class TestValidator(unittest.TestCase):
             os.remove(self.video_file)
         if os.path.exists(self.sidecar_file):
             os.remove(self.sidecar_file)
+        if "VTR_KDF_SALT" in os.environ:
+            del os.environ["VTR_KDF_SALT"]
 
     def test_invalid_json_sidecar(self):
         """Test that validating a sidecar with invalid JSON returns the correct error."""
@@ -186,6 +189,7 @@ class TestValidator(unittest.TestCase):
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "MERKLE_MISMATCH")
         self.assertIn("Sidecar Merkle Root does not match actual video Merkle Root", result.message)
+        self.assertNotIn("actual_root", result.details)
 
     def test_liveness_failure(self):
         """Test that a failed liveness check returns LIVENESS_FAILURE."""
@@ -220,7 +224,8 @@ class TestValidator(unittest.TestCase):
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "INVALID_SIGNATURE")
         self.assertIn("Cryptographic proof verification failed", result.message)
-        self.assertEqual(result.details["proof_expected"], "expected_proof")
+        self.assertNotIn("proof_expected", result.details)
+        self.assertNotIn("actual_merkle_root_calculated", result.details)
 
     def test_validate_container_success(self):
         """Test the happy path: successful validation."""
