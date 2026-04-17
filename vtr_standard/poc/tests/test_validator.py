@@ -186,6 +186,7 @@ class TestValidator(unittest.TestCase):
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "MERKLE_MISMATCH")
         self.assertIn("Sidecar Merkle Root does not match actual video Merkle Root", result.message)
+        self.assertNotIn("actual_root", result.details)
 
     def test_liveness_failure(self):
         """Test that a failed liveness check returns LIVENESS_FAILURE."""
@@ -213,14 +214,13 @@ class TestValidator(unittest.TestCase):
         validator = VTRValidator()
         # Mock verify_zk_proof to return False
         with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.verify_zk_proof", return_value=False):
-            # Mock calculate_expected_proof for the error details
-            with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.calculate_expected_proof", return_value="expected_proof"):
-                result = validator.validate_container(self.video_file)
+            result = validator.validate_container(self.video_file)
 
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "INVALID_SIGNATURE")
         self.assertIn("Cryptographic proof verification failed", result.message)
-        self.assertEqual(result.details["proof_expected"], "expected_proof")
+        self.assertNotIn("proof_expected", result.details)
+        self.assertNotIn("actual_merkle_root_calculated", result.details)
 
     def test_validate_container_success(self):
         """Test the happy path: successful validation."""
