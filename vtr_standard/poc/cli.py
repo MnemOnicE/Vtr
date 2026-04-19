@@ -87,6 +87,7 @@ def cmd_verify(args):
         config = VTRConfig.from_env()
     except ValueError:
         config = VTRConfig(kdf_salt=b"vtr_demo_salt_2025")
+        logger.warning("⚠️  Using DEMO SALT. Do not use this in production.")
 
     validator = VTRValidator(config)
     result = validator.validate_container(args.video_path, args.sidecar)
