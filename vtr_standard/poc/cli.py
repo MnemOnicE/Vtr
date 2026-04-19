@@ -10,6 +10,7 @@ import os
 import logging
 from .vtr_container import VTRContainer
 from .validator import VTRValidator
+from .config import VTRConfig
 
 # Configure Logging
 logger = logging.getLogger("vtr")
@@ -49,7 +50,14 @@ def cmd_sign(args):
     sensor_id = args.sensor_id if args.sensor_id else "MOCK_SENSOR_DEFAULT_001"
 
     try:
-        container = VTRContainer(args.video_path, sensor_id_mock=sensor_id)
+        try:
+            config = VTRConfig.from_env()
+        except ValueError:
+            # Inject a demo config for CLI usage if env is not strictly set
+            config = VTRConfig(kdf_salt=b"vtr_demo_salt_2025")
+            logger.warning("⚠️  Using DEMO SALT. Do not use this in production.")
+
+        container = VTRContainer(args.video_path, sensor_id_mock=sensor_id, config=config)
 
         # Determine previous sidecar path for chaining
         prev_sidecar = args.link_to if args.link_to else None
@@ -75,7 +83,12 @@ def cmd_verify(args):
     if not args.json:
         logger.info(f"🔍  Verifying: {args.video_path}")
 
-    validator = VTRValidator()
+    try:
+        config = VTRConfig.from_env()
+    except ValueError:
+        config = VTRConfig(kdf_salt=b"vtr_demo_salt_2025")
+
+    validator = VTRValidator(config)
     result = validator.validate_container(args.video_path, args.sidecar)
 
     if args.json:
