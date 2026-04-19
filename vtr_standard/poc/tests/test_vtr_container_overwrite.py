@@ -16,7 +16,10 @@ except ImportError:
     class MockBaseModel:
         def __init__(self, **kwargs):
             for k, v in kwargs.items():
-                setattr(self, k, v)
+                if isinstance(v, dict):
+                    setattr(self, k, MockBaseModel(**v))
+                else:
+                    setattr(self, k, v)
         @classmethod
         def model_validate(cls, data):
             return cls(**data)
@@ -34,6 +37,7 @@ except ImportError:
     sys.modules["pydantic"] = mock_pydantic
 
 from vtr_standard.poc.vtr_container import VTRContainer
+from vtr_standard.poc.config import VTRConfig
 
 class TestVTRContainerOverwrite(unittest.TestCase):
     """
@@ -48,7 +52,7 @@ class TestVTRContainerOverwrite(unittest.TestCase):
         with open(self.video_path, "wb") as f:
             f.write(b"dummy video content")
 
-        self.container = VTRContainer(self.video_path, "TEST_SENSOR")
+        self.container = VTRContainer(self.video_path, "TEST_SENSOR", VTRConfig(kdf_salt=b"test_salt"))
 
     def tearDown(self):
         if os.path.exists(self.video_path):

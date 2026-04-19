@@ -9,7 +9,10 @@ import os
 import logging
 import uuid
 from .mock_prnu import MockPRNU
-from .schemas import VTRSidecar, HardwareSignature, LegalAssertions
+from .schemas import VTRSidecar, HardwareSignature, LegalAssertions, VTR_VERSION
+from .config import VTRConfig
+from pathlib import Path
+from .validator import VTRValidator
 
 # Configure module-level logger
 logger = logging.getLogger(__name__)
@@ -22,12 +25,14 @@ class VTRContainer:
     containing cryptographic proofs and legal assertions.
     """
 
-    def __init__(self, raw_video_path, sensor_id_mock):
+    def __init__(self, raw_video_path, sensor_id_mock, config: VTRConfig):
         """Initializes the VTRContainer."""
-        self.video_path = raw_video_path
+        # STRICT PATH SANITIZATION
+        self.video_path = str(Path(raw_video_path).resolve())
         self.timestamp = time.time()
+        self.config = config
         # Initialize the hardware root of trust (the Merged MockPRNU)
-        self.prnu = MockPRNU(sensor_id_mock)
+        self.prnu = MockPRNU(sensor_id_mock, self.config)
 
     def create_sidecar(self, allow_ai_training=False, previous_sidecar_path=None, overwrite=False):
         """Generates the .vtr sidecar JSON file.
@@ -47,33 +52,21 @@ class VTRContainer:
 
         previous_signature = None
         if previous_sidecar_path:
+            # STRICT CHAIN OF CUSTODY CHECK
+            # If a previous link is requested, it MUST be valid.
+            validator = VTRValidator(self.config)
+            res = validator.validate_sidecar_only(previous_sidecar_path)
+
+            if not res.is_valid:
+                raise ValueError(f"Chain of Custody Failure: Previous sidecar is invalid. {res.error_code}: {res.message}")
+
+            # The schema validation passed, so we can read the proof
             try:
-                # STRICT CHAIN OF CUSTODY CHECK
-                # If a previous link is requested, it MUST be valid.
-                with open(previous_sidecar_path, 'r') as f:
+                with open(Path(previous_sidecar_path).resolve(), 'r') as f:
                     prev_data = json.load(f)
-
-                # We attempt to validate the previous sidecar against the schema to ensure integrity
-                try:
-                    prev_model = VTRSidecar.model_validate(prev_data)
-                    previous_signature = prev_model.hardware_signature.zk_proof
-                except Exception as e:
-                    # Fallback to loose extraction if strict schema fails?
-                    # Sentinel says: NO. If schema is invalid, the chain is suspect.
-                    # However, to be slightly pragmatic for cross-version compatibility (if handled),
-                    # we might inspect the error. For now, we enforce structure.
-                    raise ValueError(f"Previous sidecar schema validation failed: {e}")
-
-                if not previous_signature:
-                    raise ValueError(f"Could not extract zk_proof from {previous_sidecar_path}")
-
-            except FileNotFoundError:
-                raise FileNotFoundError(f"Previous sidecar not found at: {previous_sidecar_path}")
-            except json.JSONDecodeError:
-                raise ValueError(f"Previous sidecar is not valid JSON: {previous_sidecar_path}")
+                previous_signature = prev_data["hardware_signature"]["zk_proof"]
             except Exception as e:
-                # Re-raise to halt execution. Chain of Custody cannot be optional if requested.
-                raise ValueError(f"Chain of Custody Failure: {e}") from e
+                raise ValueError(f"Chain of Custody Failure: Could not extract zk_proof from valid sidecar. {e}")
 
         # --- 1. Hardware Signature Components ---
         # Calculate liveness and location first to bind them in the proof
@@ -118,7 +111,7 @@ class VTRContainer:
         )
 
         sidecar = VTRSidecar(
-            vtr_version="2.2",
+            vtr_version=VTR_VERSION,
             hardware_signature=hardware_signature,
             legal_assertions=legal_assertions
         )
@@ -132,9 +125,12 @@ class VTRContainer:
 
 if __name__ == "__main__":
     import sys
-    # Set environment variables for deterministic MockPRNU in demo mode
-    if "VTR_KDF_SALT" not in os.environ:
-        os.environ["VTR_KDF_SALT"] = "vtr_demo_salt_2025"
+    # DEMO MODE: Provide a dummy config if run directly
+    try:
+        config = VTRConfig.from_env()
+    except ValueError:
+        # Provide the demo salt instead of failing
+        config = VTRConfig(kdf_salt=b"vtr_demo_salt_2025")
 
     logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='%(message)s')
     logger.info("--- OntoLogics VTR Generator v2.0 (Merged POC) ---")
@@ -151,10 +147,10 @@ if __name__ == "__main__":
     ensure_dummy_video("second_video.mp4")
 
     # Simulate a "Potato Phone" capturing a video (First Link in the Chain)
-    camera_1 = VTRContainer("first_video.mp4", sensor_id_mock="SENSOR_PRNU_XYZ_999")
+    camera_1 = VTRContainer("first_video.mp4", "SENSOR_PRNU_XYZ_999", config)
     camera_1.create_sidecar(allow_ai_training=True)
 
     # Simulate capturing a subsequent video (Second Link in the Chain)
-    camera_2 = VTRContainer("second_video.mp4", sensor_id_mock="SENSOR_PRNU_XYZ_999")
+    camera_2 = VTRContainer("second_video.mp4", "SENSOR_PRNU_XYZ_999", config)
     # Link to the first sidecar to create the Chain of Custody
     camera_2.create_sidecar(allow_ai_training=False, previous_sidecar_path="first_video.mp4.vtr.json")
