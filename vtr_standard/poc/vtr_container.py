@@ -60,13 +60,10 @@ class VTRContainer:
             if not res.is_valid:
                 raise ValueError(f"Chain of Custody Failure: Previous sidecar is invalid. {res.error_code}: {res.message}")
 
-            # The schema validation passed, so we can read the proof
-            try:
-                with open(Path(previous_sidecar_path).resolve(), 'r') as f:
-                    prev_data = json.load(f)
-                previous_signature = prev_data["hardware_signature"]["zk_proof"]
-            except Exception as e:
-                raise ValueError(f"Chain of Custody Failure: Could not extract zk_proof from valid sidecar. {e}")
+            # The schema validation passed, extract the proof directly from the result
+            previous_signature = res.details.get("zk_proof")
+            if not previous_signature:
+                raise ValueError(f"Chain of Custody Failure: Could not extract zk_proof from valid sidecar.")
 
         # --- 1. Hardware Signature Components ---
         # Calculate liveness and location first to bind them in the proof

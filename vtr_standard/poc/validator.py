@@ -133,7 +133,8 @@ class VTRValidator:
                     "vtr_version": sidecar.vtr_version,
                     "timestamp": hw_sig.timestamp,
                     "liveness": hw_sig.liveness_flag,
-                    "merkle_root": actual_merkle_root
+                    "merkle_root": actual_merkle_root,
+                    "zk_proof": hw_sig.zk_proof
             }
             if hw_sig.previous_signature_link:
                 details["chained_to_previous_proof"] = True

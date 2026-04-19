@@ -61,15 +61,7 @@ class TestChainFailure(unittest.TestCase):
 
     def test_chain_failure_raises_exception(self):
         """Test that linking to an invalid sidecar raises ValueError."""
-        # Force MockBaseModel to raise an exception simulating ValidationError
-        import pydantic
-        original_validate = pydantic.BaseModel.model_validate
-        def mock_validate(data):
-            if "broken" in data:
-                raise pydantic.ValidationError("Invalid schema")
-            return original_validate(data)
-        pydantic.BaseModel.model_validate = classmethod(mock_validate)
-        self.addCleanup(setattr, pydantic.BaseModel, "model_validate", original_validate)
+
 
         container = VTRContainer(self.video_file, "TEST_SENSOR", VTRConfig(kdf_salt=b"test_salt"))
 
