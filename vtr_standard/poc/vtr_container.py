@@ -122,12 +122,8 @@ class VTRContainer:
 
 if __name__ == "__main__":
     import sys
-    # DEMO MODE: Provide a dummy config if run directly
-    try:
-        config = VTRConfig.from_env()
-    except ValueError:
-        # Provide the demo salt instead of failing
-        config = VTRConfig(kdf_salt=b"vtr_demo_salt_2025")
+    # DEMO MODE: Initialize config from environment
+    config = VTRConfig.from_env()
 
     logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='%(message)s')
     logger.info("--- OntoLogics VTR Generator v2.0 (Merged POC) ---")
