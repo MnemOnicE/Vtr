@@ -123,7 +123,11 @@ class VTRContainer:
 if __name__ == "__main__":
     import sys
     # DEMO MODE: Initialize config from environment
-    config = VTRConfig.from_env()
+    try:
+        config = VTRConfig.from_env()
+    except ValueError as e:
+        print(f"❌ Configuration Error: {e}")
+        sys.exit(1)
 
     logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='%(message)s')
     logger.info("--- OntoLogics VTR Generator v2.0 (Merged POC) ---")
