@@ -66,7 +66,7 @@ def cmd_sign(args):
             overwrite=args.force
         )
     except ValueError as e:
-        logger.error(f"❌  Configuration Error: {e}")
+        logger.error(f"❌  Error: {e}")
         sys.exit(1)
     except FileExistsError as e:
         logger.error(f"❌  Error: {e}")
