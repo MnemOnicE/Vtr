@@ -50,7 +50,11 @@ def cmd_sign(args):
     sensor_id = args.sensor_id if args.sensor_id else "MOCK_SENSOR_DEFAULT_001"
 
     try:
-        config = VTRConfig.from_env()
+        try:
+            config = VTRConfig.from_env()
+        except ValueError as e:
+            logger.error(f"❌  Configuration Error: {e}")
+            sys.exit(1)
         container = VTRContainer(args.video_path, sensor_id_mock=sensor_id, config=config)
 
         # Determine previous sidecar path for chaining
