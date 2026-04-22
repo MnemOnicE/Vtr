@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import os
 import random
+import secrets
 from typing import Optional
 
 from .merkle import MerkleTree
@@ -33,7 +34,7 @@ class MockPRNU:
 
         # Mock GPS Block used for location hashing.
         # SECURITY FIX: Generate a random salt if not provided via config.
-        self.gps_salt = self.config.test_gps or os.urandom(16).hex()
+        self.gps_salt = self.config.test_gps or secrets.token_hex(16)
 
         # Performance Optimization: Pre-calculate and cache static values
         kdf_salt = self.config.kdf_salt
