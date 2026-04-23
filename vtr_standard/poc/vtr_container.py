@@ -34,6 +34,19 @@ class VTRContainer:
         # Initialize the hardware root of trust (the Merged MockPRNU)
         self.prnu = MockPRNU(sensor_id_mock, self.config)
 
+
+    @staticmethod
+    def ensure_dummy_video(filename):
+        """
+        Creates a dummy video file if it does not exist.
+        Useful for testing and CLI usage.
+        """
+        if not os.path.exists(filename):
+            logger.info(f"🎥 Generating dummy video file: {filename}")
+            # Generate 1MB of random bytes to simulate video content
+            with open(filename, 'wb') as f:
+                f.write(os.urandom(1024 * 1024))
+
     def create_sidecar(self, allow_ai_training=False, previous_sidecar_path=None, overwrite=False):
         """Generates the .vtr sidecar JSON file.
 
@@ -133,15 +146,8 @@ if __name__ == "__main__":
     logger.info("--- OntoLogics VTR Generator v2.0 (Merged POC) ---")
 
     # DEMO MODE: Auto-generate dummy files if they don't exist
-    def ensure_dummy_video(filename):
-        if not os.path.exists(filename):
-            logger.info(f"🎥 Generating dummy video file: {filename}")
-            # Generate 1MB of random bytes to simulate video content
-            with open(filename, 'wb') as f:
-                f.write(os.urandom(1024 * 1024))
-
-    ensure_dummy_video("first_video.mp4")
-    ensure_dummy_video("second_video.mp4")
+    VTRContainer.ensure_dummy_video("first_video.mp4")
+    VTRContainer.ensure_dummy_video("second_video.mp4")
 
     # Simulate a "Potato Phone" capturing a video (First Link in the Chain)
     camera_1 = VTRContainer("first_video.mp4", "SENSOR_PRNU_XYZ_999", config)
