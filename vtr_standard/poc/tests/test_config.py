@@ -9,6 +9,7 @@ from unittest import mock
 
 from vtr_standard.poc.config import VTRConfig
 
+
 class TestVTRConfig(unittest.TestCase):
 
     @mock.patch.dict(os.environ, {}, clear=True)
