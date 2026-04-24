@@ -59,11 +59,17 @@ class TestVTRConfig(unittest.TestCase):
         self.assertEqual(config.kdf_iterations, 100000)
 
     @mock.patch.dict(os.environ, {"VTR_KDF_SALT": "salt", "VTR_KDF_ITERATIONS": "-5"}, clear=True)
-    def test_from_env_negative_iterations(self):
+    def test_from_env_negative_or_zero_iterations(self):
         """Test iterations fall back to 1 if parsed value is less than 1."""
+        # Test negative value
         config = VTRConfig.from_env()
         self.assertEqual(config.kdf_salt, b"salt")
         self.assertEqual(config.kdf_iterations, 1)
+
+        # Test zero value
+        with mock.patch.dict(os.environ, {"VTR_KDF_SALT": "salt", "VTR_KDF_ITERATIONS": "0"}, clear=True):
+            config = VTRConfig.from_env()
+            self.assertEqual(config.kdf_iterations, 1)
 
 if __name__ == '__main__':
     unittest.main()
