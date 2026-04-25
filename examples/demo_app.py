@@ -38,7 +38,7 @@ if st.sidebar.button("🔒 Sign Video") and uploaded_file_sign:
 
         try:
             # Create Container
-            container = VTRContainer(tmp_vid_path, sensor_id_mock=sensor_id)
+            container = VTRContainer(tmp_vid_path, sensor_id_mock=sensor_id, config=config)
             # We need to handle the sidecar path manually
             # since VTRContainer writes to disk next to file
             container.create_sidecar(
