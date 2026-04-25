@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import tempfile
 import shutil
+from vtr_standard.poc.config import VTRConfig
 import json
 from vtr_standard.poc.vtr_container import VTRContainer
 from vtr_standard.poc.validator import VTRValidator
