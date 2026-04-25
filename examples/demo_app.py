@@ -2,7 +2,6 @@ import streamlit as st
 import os
 import tempfile
 import shutil
-from vtr_standard.poc.config import VTRConfig
 import json
 from vtr_standard.poc.vtr_container import VTRContainer
 from vtr_standard.poc.validator import VTRValidator
@@ -13,8 +12,6 @@ st.set_page_config(
     page_icon="🎥",
     layout="centered"
 )
-
-config = VTRConfig.from_env()
 
 st.title("🎥 VTR Truth Terminal")
 st.markdown("### The Hardware-Attested Media Validator")
@@ -37,11 +34,12 @@ if st.sidebar.button("🔒 Sign Video") and uploaded_file_sign:
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_vid_path = os.path.join(tmp_dir, "video.mp4")
         with open(tmp_vid_path, "wb") as f:
+            uploaded_file_sign.seek(0)
             shutil.copyfileobj(uploaded_file_sign, f)
 
         try:
             # Create Container
-            container = VTRContainer(tmp_vid_path, sensor_id_mock=sensor_id, config=config)
+            container = VTRContainer(tmp_vid_path, sensor_id_mock=sensor_id)
             # We need to handle the sidecar path manually
             # since VTRContainer writes to disk next to file
             container.create_sidecar(
@@ -87,41 +85,42 @@ with col2:
         key="s"
     )
 
-if vid_file and sidecar_file:
-    if st.button("🔍 Verify Integrity"):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            # Save to temp for processing
-            t_vid_path = os.path.join(tmp_dir, "video.mp4")
-            with open(t_vid_path, "wb") as f:
-                shutil.copyfileobj(vid_file, f)
+if vid_file and sidecar_file and st.button("🔍 Verify Integrity"):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Save to temp for processing
+        t_vid_path = os.path.join(tmp_dir, "video.mp4")
+        with open(t_vid_path, "wb") as f:
+            vid_file.seek(0)
+            shutil.copyfileobj(vid_file, f)
 
-            t_json_path = os.path.join(tmp_dir, "sidecar.json")
-            with open(t_json_path, "wb") as f:
-                shutil.copyfileobj(sidecar_file, f)
+        t_json_path = os.path.join(tmp_dir, "sidecar.json")
+        with open(t_json_path, "wb") as f:
+            sidecar_file.seek(0)
+            shutil.copyfileobj(sidecar_file, f)
 
-            validator = VTRValidator(config=config)
-            result = validator.validate_container(t_vid_path, t_json_path)
+        validator = VTRValidator()
+        result = validator.validate_container(t_vid_path, t_json_path)
 
-            if result.is_valid:
-                st.success("✅ **VERIFICATION SUCCESSFUL**")
-                st.balloons()
-                st.markdown("---")
-                m_root = result.details.get("merkle_root", "")[:16]
-                st.markdown(
-                    f"**Authenticated Sensor:** `{m_root}...`"
-                )  # proxy
-                st.markdown("**Liveness Check:** `PASS`")
+        if result.is_valid:
+            st.success("✅ **VERIFICATION SUCCESSFUL**")
+            st.balloons()
+            st.markdown("---")
+            m_root = result.details.get("merkle_root", "")[:16]
+            st.markdown(
+                f"**Authenticated Sensor:** `{m_root}...`"
+            )  # proxy
+            st.markdown("**Liveness Check:** `PASS`")
+            st.json(result.details)
+        else:
+            st.error("❌ **VERIFICATION FAILED**")
+            st.markdown(f"**Error Code:** `{result.error_code}`")
+            st.markdown(f"**Reason:** {result.message}")
+            with st.expander("Technical Details"):
                 st.json(result.details)
-            else:
-                st.error("❌ **VERIFICATION FAILED**")
-                st.markdown(f"**Error Code:** `{result.error_code}`")
-                st.markdown(f"**Reason:** {result.message}")
-                with st.expander("Technical Details"):
-                    st.json(result.details)
 
-                # Fun tamper viz
-                st.warning("⚠️ **Tamper Evidence Detected**")
-                st.text(
-                    "The Merkle Root of the video content "
-                    "does not match the hardware signature."
-                )
+            # Fun tamper viz
+            st.warning("⚠️ **Tamper Evidence Detected**")
+            st.text(
+                "The Merkle Root of the video content "
+                "does not match the hardware signature."
+            )
