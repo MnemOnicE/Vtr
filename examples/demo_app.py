@@ -96,7 +96,7 @@ if vid_file and sidecar_file:
             with open(t_json_path, "wb") as f:
                 shutil.copyfileobj(sidecar_file, f)
 
-            validator = VTRValidator()
+            validator = VTRValidator(config=config)
             result = validator.validate_container(t_vid_path, t_json_path)
 
             if result.is_valid:
