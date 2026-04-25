@@ -13,6 +13,8 @@ st.set_page_config(
     layout="centered"
 )
 
+config = VTRConfig.from_env()
+
 st.title("🎥 VTR Truth Terminal")
 st.markdown("### The Hardware-Attested Media Validator")
 
