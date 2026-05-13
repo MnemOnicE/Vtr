@@ -2,56 +2,15 @@
 import unittest
 import os
 import json
-import sys
-from unittest.mock import MagicMock
-
-# VTR-STANDUP: Fallback Mock for restricted environments where pydantic is missing.
-try:
-    import pydantic
-except ImportError:
-    class MockBaseModel:
-        def __init__(self, **kwargs):
-            # Simulation of basic required field validation for VTRSidecar in this test
-            if "vtr_version" not in kwargs and self.__class__.__name__ == "VTRSidecar":
-                 raise Exception("Mock Validation Error: missing vtr_version")
-
-            for k, v in kwargs.items():
-                if isinstance(v, dict):
-                    setattr(self, k, MockBaseModel(**v))
-                else:
-                    setattr(self, k, v)
-        @classmethod
-        def model_validate(cls, data):
-            # In test_chain_failure_raises_exception, we pass a broken schema
-            # We want it to fail naturally if possible.
-            if "hardware_signature" not in data or "legal_assertions" not in data:
-                 raise Exception("Mock Validation Error: Missing required fields")
-            return cls(**data)
-        def model_dump_json(self, **kwargs):
-            import json
-            def default(obj):
-                if hasattr(obj, '__dict__'):
-                    return obj.__dict__
-                return str(obj)
-            return json.dumps(self.__dict__, default=default)
-
-    mock_pydantic = MagicMock()
-    mock_pydantic.BaseModel = MockBaseModel
-    mock_pydantic.Field = MagicMock(return_value=None)
-    mock_pydantic.ValidationError = Exception
-    if "pydantic" not in sys.modules:
-        sys.modules["pydantic"] = mock_pydantic
-
 import logging
 from vtr_standard.poc.vtr_container import VTRContainer
-from vtr_standard.poc.config import VTRConfig
+from vtr_standard.poc.schemas import VTRSidecar
 
 # Disable logging for tests
 logging.getLogger("vtr_standard.poc.vtr_container").setLevel(logging.CRITICAL)
 
 class TestChainFailure(unittest.TestCase):
     def setUp(self):
-        os.environ["VTR_KDF_SALT"] = "test_chain_salt"
         self.video_file = "test_chain_failure_video.mp4"
         with open(self.video_file, "wb") as f:
             f.write(os.urandom(1024))
@@ -67,36 +26,35 @@ class TestChainFailure(unittest.TestCase):
             os.remove(self.bad_sidecar)
         if os.path.exists(f"{self.video_file}.vtr.json"):
             os.remove(f"{self.video_file}.vtr.json")
-        if "VTR_KDF_SALT" in os.environ:
-            del os.environ["VTR_KDF_SALT"]
 
     def test_chain_failure_raises_exception(self):
         """Test that linking to an invalid sidecar raises ValueError."""
-        container = VTRContainer(self.video_file, "TEST_SENSOR", VTRConfig(kdf_salt=b"test_salt"))
+        container = VTRContainer(self.video_file, "TEST_SENSOR")
 
-        # The bad_sidecar has invalid schema.
-        # With our improved MockBaseModel, model_validate should raise Exception naturally.
         with self.assertRaises(ValueError) as context:
             container.create_sidecar(previous_sidecar_path=self.bad_sidecar)
 
         # The bad_sidecar has invalid schema, which gets caught and re-raised as "Chain of Custody Failure: ..."
         self.assertIn("Chain of Custody Failure:", str(context.exception))
-        self.assertIn("INVALID_SCHEMA:", str(context.exception))
+        self.assertIn("Previous sidecar schema validation failed:", str(context.exception.__cause__))
+
+
+
 
     def test_missing_sidecar_raises_exception(self):
         """Test that linking to a non-existent sidecar raises FileNotFoundError."""
-        container = VTRContainer(self.video_file, "TEST_SENSOR", VTRConfig(kdf_salt=b"test_salt"))
+        container = VTRContainer(self.video_file, "TEST_SENSOR")
         missing_path = "non_existent.json"
 
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(FileNotFoundError) as context:
             container.create_sidecar(previous_sidecar_path=missing_path)
 
-        self.assertIn("SIDECAR_NOT_FOUND:", str(context.exception))
+        self.assertEqual(str(context.exception), f"Previous sidecar not found at: {missing_path}")
 
 
     def test_invalid_json_sidecar_raises_exception(self):
         """Test that linking to a sidecar with invalid JSON raises ValueError."""
-        container = VTRContainer(self.video_file, "TEST_SENSOR", VTRConfig(kdf_salt=b"test_salt"))
+        container = VTRContainer(self.video_file, "TEST_SENSOR")
 
         # Create an invalid JSON sidecar
         invalid_json_sidecar = "invalid_json.vtr.json"
@@ -107,7 +65,7 @@ class TestChainFailure(unittest.TestCase):
             with self.assertRaises(ValueError) as context:
                 container.create_sidecar(previous_sidecar_path=invalid_json_sidecar)
 
-            self.assertIn("INVALID_JSON:", str(context.exception))
+            self.assertEqual(str(context.exception), f"Previous sidecar is not valid JSON: {invalid_json_sidecar}")
         finally:
             if os.path.exists(invalid_json_sidecar):
                 os.remove(invalid_json_sidecar)
