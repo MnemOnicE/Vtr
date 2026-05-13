@@ -4,7 +4,6 @@
 # This code is distributed WITHOUT ANY WARRANTY.
 
 import json
-import os
 from pathlib import Path
 import logging
 from dataclasses import dataclass, field
