@@ -3,7 +3,6 @@
 # A copy of the License is available in the root/vtr_standard/poc/LICENSE file.
 # This code is distributed WITHOUT ANY WARRANTY.
 
-import json
 import time
 import os
 import logging
