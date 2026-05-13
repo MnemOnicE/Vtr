@@ -3,10 +3,9 @@
 # A copy of the License is available in the root/vtr_standard/poc/LICENSE file.
 # This code is distributed WITHOUT ANY WARRANTY.
 
-import json
-import time
-import os
 import logging
+import os
+import time
 import uuid
 from .mock_prnu import MockPRNU
 from .schemas import VTRSidecar, HardwareSignature, LegalAssertions, VTR_VERSION
