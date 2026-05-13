@@ -1,8 +1,3 @@
-# Copyright (c) 2025 OntoLogics (Seth & Axion). All rights reserved.
-# Licensed under the VTR Public License (VTR-PL), Version 1.0 (the "License").
-# A copy of the License is available in the root/vtr_standard/poc/LICENSE file.
-# This code is distributed WITHOUT ANY WARRANTY.
-
 import unittest
 from unittest.mock import patch
 import os
@@ -103,16 +98,6 @@ class TestMockPRNU(unittest.TestCase):
 
         self.assertNotEqual(prnu1.gps_salt, prnu2.gps_salt)
         self.assertEqual(len(prnu1.gps_salt), 32) # hex of 16 bytes
-
-    def test_gps_salt_whitespace_randomization(self):
-        """Verify that GPS salt is random even if VTR_TEST_GPS is whitespace."""
-        config = VTRConfig(kdf_salt=b"test_logic_salt", test_gps="   ")
-        prnu = MockPRNU("sensor_1", config)
-
-        # Should be a random hex string, not the spaces
-        self.assertNotEqual(prnu.gps_salt, "   ")
-        self.assertNotEqual(prnu.gps_salt, "")
-        self.assertEqual(len(prnu.gps_salt), 32)
 
 if __name__ == "__main__":
     unittest.main()

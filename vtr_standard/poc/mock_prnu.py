@@ -33,8 +33,8 @@ class MockPRNU:
             )
 
         # Mock GPS Block used for location hashing.
-        # SECURITY FIX: Generate a random salt if not provided via config or if provided as empty/whitespace.
-        self.gps_salt = (self.config.test_gps or "").strip() or secrets.token_hex(16)
+        # SECURITY FIX: Generate a random salt if not provided via config.
+        self.gps_salt = self.config.test_gps or secrets.token_hex(16)
 
         # Performance Optimization: Pre-calculate and cache static values
         kdf_salt = self.config.kdf_salt

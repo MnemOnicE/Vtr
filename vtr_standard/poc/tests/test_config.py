@@ -31,14 +31,16 @@ class TestVTRConfig(unittest.TestCase):
     def test_from_env_missing_salt(self):
         """Test that ValueError is raised when VTR_KDF_SALT is missing."""
         with patch.dict(os.environ, {}, clear=True):
-        with self.assertRaisesRegex(ValueError, "VTR_KDF_SALT environment variable is missing"):
-            VTRConfig.from_env()
+            with self.assertRaises(ValueError) as cm:
+                VTRConfig.from_env()
+            self.assertIn("VTR_KDF_SALT environment variable is missing", str(cm.exception))
 
     def test_from_env_empty_salt(self):
         """Test that ValueError is raised when VTR_KDF_SALT is empty."""
         with patch.dict(os.environ, {"VTR_KDF_SALT": ""}, clear=True):
-        with self.assertRaisesRegex(ValueError, "VTR_KDF_SALT environment variable is missing"):
-            VTRConfig.from_env()
+            with self.assertRaises(ValueError) as cm:
+                VTRConfig.from_env()
+            self.assertIn("VTR_KDF_SALT environment variable is missing", str(cm.exception))
 
     def test_from_env_default_iterations(self):
         """Test default iterations when VTR_KDF_ITERATIONS is not set."""
@@ -58,12 +60,17 @@ class TestVTRConfig(unittest.TestCase):
             config = VTRConfig.from_env()
             self.assertEqual(config.kdf_iterations, 200000)
 
-    def test_from_env_iteration_clamping(self):
-        """Test that iterations are clamped to a minimum of 1."""
-        for val in ["-100", "0"]:
-            with patch.dict(os.environ, {"VTR_KDF_SALT": "test_salt", "VTR_KDF_ITERATIONS": val}, clear=True):
-                config = VTRConfig.from_env()
-                self.assertEqual(config.kdf_iterations, 1)
+    def test_from_env_negative_iterations_clamping(self):
+        """Test that negative iterations are clamped to 1 (as per implementation max(1, ...))."""
+        with patch.dict(os.environ, {"VTR_KDF_SALT": "test_salt", "VTR_KDF_ITERATIONS": "-100"}, clear=True):
+            config = VTRConfig.from_env()
+            self.assertEqual(config.kdf_iterations, 1)
+
+    def test_from_env_zero_iterations_clamping(self):
+        """Test that zero iterations are clamped to 1 (as per implementation max(1, ...))."""
+        with patch.dict(os.environ, {"VTR_KDF_SALT": "test_salt", "VTR_KDF_ITERATIONS": "0"}, clear=True):
+            config = VTRConfig.from_env()
+            self.assertEqual(config.kdf_iterations, 1)
 
     def test_from_env_defaults(self):
         """Test default values for optional environment variables."""
