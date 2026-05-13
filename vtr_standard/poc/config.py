@@ -51,5 +51,5 @@ class VTRConfig:
             kdf_iterations=iterations,
             test_liveness=test_liveness,
             test_gps=test_gps,
-            env=os.environ.get("VTR_ENV", "DEVELOPMENT")
+            env=os.environ.get("VTR_ENV", "DEVELOPMENT").strip().upper()
         )
