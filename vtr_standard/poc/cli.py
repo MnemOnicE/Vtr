@@ -6,10 +6,10 @@
 import argparse
 import sys
 import json
+import os
 import logging
 from .vtr_container import VTRContainer
 from .validator import VTRValidator
-from .config import VTRConfig
 
 # Configure Logging
 logger = logging.getLogger("vtr")
@@ -49,12 +49,7 @@ def cmd_sign(args):
     sensor_id = args.sensor_id if args.sensor_id else "MOCK_SENSOR_DEFAULT_001"
 
     try:
-        try:
-            config = VTRConfig.from_env()
-        except ValueError as e:
-            logger.error(f"❌  Configuration Error: {e}")
-            sys.exit(1)
-        container = VTRContainer(args.video_path, sensor_id_mock=sensor_id, config=config)
+        container = VTRContainer(args.video_path, sensor_id_mock=sensor_id)
 
         # Determine previous sidecar path for chaining
         prev_sidecar = args.link_to if args.link_to else None
@@ -64,9 +59,6 @@ def cmd_sign(args):
             previous_sidecar_path=prev_sidecar,
             overwrite=args.force
         )
-    except ValueError as e:
-        logger.error(f"❌  Error: {e}")
-        sys.exit(1)
     except FileExistsError as e:
         logger.error(f"❌  Error: {e}")
         logger.error("    Use --force to overwrite the existing sidecar.")
@@ -83,16 +75,8 @@ def cmd_verify(args):
     if not args.json:
         logger.info(f"🔍  Verifying: {args.video_path}")
 
-    try:
-        config = VTRConfig.from_env()
-        validator = VTRValidator(config)
-        result = validator.validate_container(args.video_path, args.sidecar)
-    except ValueError as e:
-        if args.json:
-            print(json.dumps({"is_valid": False, "error_code": "CONFIG_ERROR", "message": str(e)}, indent=4))
-        else:
-            logger.error(f"❌  Configuration Error: {e}")
-        sys.exit(1)
+    validator = VTRValidator()
+    result = validator.validate_container(args.video_path, args.sidecar)
 
     if args.json:
         # Output pure JSON to stdout
@@ -105,21 +89,22 @@ def cmd_verify(args):
         print(json.dumps(output, indent=4))
         if not result.is_valid:
             sys.exit(1)
+        return
+
+    if result.is_valid:
+        logger.info("\n✅  VERIFICATION SUCCESSFUL")
+        logger.info("    The video content matches the hardware signature.")
+        logger.info("-" * 40)
+        for key, value in result.details.items():
+            logger.info(f"    {key}: {value}")
+        logger.info("-" * 40)
     else:
-        if result.is_valid:
-            logger.info("\n✅  VERIFICATION SUCCESSFUL")
-            logger.info("    The video content matches the hardware signature.")
-            logger.info("-" * 40)
-            for key, value in result.details.items():
-                logger.info(f"    {key}: {value}")
-            logger.info("-" * 40)
-        else:
-            logger.error("\n❌  VERIFICATION FAILED")
-            logger.error(f"    Error Code: {result.error_code}")
-            logger.error(f"    Message:    {result.message}")
-            if result.details:
-                logger.error(f"    Details:    {json.dumps(result.details, indent=4)}")
-            sys.exit(1)
+        logger.error("\n❌  VERIFICATION FAILED")
+        logger.error(f"    Error Code: {result.error_code}")
+        logger.error(f"    Message:    {result.message}")
+        if result.details:
+            logger.error(f"    Details:    {json.dumps(result.details, indent=4)}")
+        sys.exit(1)
 
 def main():
     setup_logging()
