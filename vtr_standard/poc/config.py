@@ -38,6 +38,8 @@ class VTRConfig:
         except ValueError:
             iterations = 100000
 
+        test_liveness = (os.environ.get("VTR_TEST_LIVENESS") or "").strip() or None
+        test_gps = (os.environ.get("VTR_TEST_GPS") or "").strip() or None
         test_liveness = os.environ.get("VTR_TEST_LIVENESS")
         if test_liveness is not None:
             test_liveness = test_liveness.strip()
