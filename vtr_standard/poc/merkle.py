@@ -85,11 +85,13 @@ class MerkleTree:
         leaf_hasher.update(b'\x00')
 
         for chunk in streamer.stream():
+            h = hashlib.sha256(b'\x00')
             h = leaf_hasher.copy()
             h.update(chunk)
             hashes.append(h.digest())
 
         if not hashes:
+            return [hashlib.sha256(b'\x00').digest()]
             return [leaf_hasher.digest()]
 
         return hashes
@@ -111,6 +113,7 @@ class MerkleTree:
                 # Handle odd number of leaves by duplicating the last one
                 node2 = current_level[i+1] if i + 1 < len(current_level) else node1
 
+                h = hashlib.sha256(b'\x01')
                 h = node_hasher.copy()
                 h.update(node1)
                 h.update(node2)
