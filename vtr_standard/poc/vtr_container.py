@@ -34,19 +34,21 @@ class VTRContainer:
         # Initialize the hardware root of trust (the Merged MockPRNU)
         self.prnu = MockPRNU(sensor_id_mock, self.config)
 
+
     @staticmethod
     def ensure_dummy_video(filename):
         """
         Creates a dummy video file if it does not exist.
         Useful for testing and CLI usage.
         """
-        path = Path(filename)
-        if not path.exists():
-            # Ensure the parent directory exists to avoid FileNotFoundError
-            path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            # Atomic file creation: fails if the file already exists
+            fd = os.open(filename, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             logger.info(f"🎥 Generating dummy video file: {filename}")
-            # Generate 1MB of random bytes to simulate video content
-            path.write_bytes(os.urandom(1024 * 1024))
+            with os.fdopen(fd, 'wb') as f:
+                f.write(os.urandom(1024 * 1024))
+        except FileExistsError:
+            pass
 
     def create_sidecar(self, allow_ai_training=False, previous_sidecar_path=None, overwrite=False):
         """Generates the .vtr sidecar JSON file.

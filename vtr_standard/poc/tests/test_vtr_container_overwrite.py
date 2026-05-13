@@ -121,6 +121,11 @@ class TestVTRContainerOverwrite(unittest.TestCase):
         self.assertTrue(os.path.exists(self.test_filename))
         self.assertEqual(os.path.getsize(self.test_filename), initial_size)
 
+        # Additional assert as per PR feedback
+        with open(self.test_filename, "rb") as f:
+            content = f.read()
+        self.assertEqual(content, b"existing data")
+
 if __name__ == "__main__":
     unittest.main()
 if __name__ == "__main__":
