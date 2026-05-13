@@ -107,8 +107,7 @@ class MerkleTree:
                 # Handle odd number of leaves by duplicating the last one
                 node2 = current_level[i+1] if i + 1 < len(current_level) else node1
 
-                h = hashlib.sha256()
-                h.update(b'\x01')
+                h = hashlib.sha256(b'\x01')
                 h.update(node1)
                 h.update(node2)
                 parents.append(h.digest())
