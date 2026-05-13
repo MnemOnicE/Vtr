@@ -81,8 +81,7 @@ class MerkleTree:
         streamer = AsyncFileStream(self.file_path, self.chunk_size)
 
         for chunk in streamer.stream():
-            h = hashlib.sha256()
-            h.update(b'\x00')
+            h = hashlib.sha256(b'\x00')
             h.update(chunk)
             hashes.append(h.digest())
 
