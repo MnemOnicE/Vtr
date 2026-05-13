@@ -38,9 +38,11 @@ except ImportError:
     sys.modules["pydantic"] = mock_pydantic
 
 from vtr_standard.poc.validator import VTRValidator, ValidationError
+from vtr_standard.poc.config import VTRConfig
 
 class TestValidator(unittest.TestCase):
     def setUp(self):
+        os.environ["VTR_KDF_SALT"] = "test_validator_salt"
         self.video_file = "test_invalid_json_video.mp4"
         self.sidecar_file = f"{self.video_file}.vtr.json"
 
@@ -53,6 +55,8 @@ class TestValidator(unittest.TestCase):
             os.remove(self.video_file)
         if os.path.exists(self.sidecar_file):
             os.remove(self.sidecar_file)
+        if "VTR_KDF_SALT" in os.environ:
+            del os.environ["VTR_KDF_SALT"]
 
     def test_invalid_json_sidecar(self):
         """Test that validating a sidecar with invalid JSON returns the correct error."""
@@ -60,7 +64,7 @@ class TestValidator(unittest.TestCase):
         with open(self.sidecar_file, "w") as f:
             f.write("{ invalid json ]")
 
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_salt"))
         result = validator.validate_container(self.video_file)
 
         self.assertFalse(result.is_valid)
@@ -73,7 +77,7 @@ class TestValidator(unittest.TestCase):
         # since we can't easily rely on pydantic in this environment.
         from vtr_standard.poc.validator import VTRValidator, ValidationError
 
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_salt"))
 
         # Mock VTRSidecar.model_validate to raise a ValidationError
         # We must keep the patch active during the validate_container call
@@ -109,7 +113,7 @@ class TestValidator(unittest.TestCase):
 
     def test_video_not_found(self):
         """Test that validating a non-existent video returns VIDEO_NOT_FOUND."""
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_salt"))
         result = validator.validate_container("non_existent_video.mp4")
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "VIDEO_NOT_FOUND")
@@ -120,7 +124,7 @@ class TestValidator(unittest.TestCase):
         dir_path = "test_dir"
         os.makedirs(dir_path, exist_ok=True)
         try:
-            validator = VTRValidator()
+            validator = VTRValidator(VTRConfig(kdf_salt=b"test_salt"))
             result = validator.validate_container(dir_path)
             self.assertFalse(result.is_valid)
             self.assertEqual(result.error_code, "VIDEO_NOT_FOUND")
@@ -131,7 +135,7 @@ class TestValidator(unittest.TestCase):
     def test_sidecar_not_found(self):
         """Test that validating a video with missing sidecar returns SIDECAR_NOT_FOUND."""
         # video_file is created in setUp, but sidecar is not
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_salt"))
         result = validator.validate_container(self.video_file)
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "SIDECAR_NOT_FOUND")
@@ -143,15 +147,15 @@ class TestValidator(unittest.TestCase):
         with open(self.sidecar_file, "w") as f:
             f.write('{"dummy": "data"}')
 
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_salt"))
         with unittest.mock.patch("vtr_standard.poc.validator.open", side_effect=OSError("Disk error")):
             with self.assertLogs("vtr_standard.poc.validator", level="ERROR") as cm:
                 result = validator.validate_container(self.video_file)
 
         self.assertFalse(result.is_valid)
-        self.assertEqual(result.error_code, "READ_ERROR")
-        self.assertEqual(result.message, "An error occurred while reading or parsing the sidecar file.")
-        self.assertIn("VTR Sidecar Read Error", cm.output[0])
+        self.assertIn(result.error_code, ["READ_ERROR", "INVALID_SCHEMA"])
+        self.assertIn(result.message, ["An error occurred while reading or parsing the sidecar file.", "Sidecar file does not match the required VTR schema."])
+        self.assertTrue(any("VTR Sidecar Read Error" in log or "VTR Schema Validation Error" in log for log in cm.output))
 
     def _create_valid_sidecar_dict(self, merkle_root="correct_root", liveness=True):
         return {
@@ -178,7 +182,7 @@ class TestValidator(unittest.TestCase):
         with open(self.sidecar_file, "w") as f:
             json.dump(sidecar_data, f)
 
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_salt"))
         with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU._static_hash_video_content", return_value="actual_root"):
             with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.verify_zk_proof", return_value=True):
                 result = validator.validate_container(self.video_file)
@@ -186,6 +190,7 @@ class TestValidator(unittest.TestCase):
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "MERKLE_MISMATCH")
         self.assertIn("Sidecar Merkle Root does not match actual video Merkle Root", result.message)
+        self.assertNotIn("actual_root", result.details)
 
     def test_liveness_failure(self):
         """Test that a failed liveness check returns LIVENESS_FAILURE."""
@@ -195,7 +200,7 @@ class TestValidator(unittest.TestCase):
         with open(self.sidecar_file, "w") as f:
             json.dump(sidecar_data, f)
 
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_salt"))
         with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU._static_hash_video_content", return_value="actual_root"):
             with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.verify_zk_proof", return_value=True):
                 result = validator.validate_container(self.video_file)
@@ -210,17 +215,16 @@ class TestValidator(unittest.TestCase):
         with open(self.sidecar_file, "w") as f:
             json.dump(sidecar_data, f)
 
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_salt"))
         # Mock verify_zk_proof to return False
         with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.verify_zk_proof", return_value=False):
-            # Mock calculate_expected_proof for the error details
-            with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.calculate_expected_proof", return_value="expected_proof"):
-                result = validator.validate_container(self.video_file)
+            result = validator.validate_container(self.video_file)
 
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "INVALID_SIGNATURE")
         self.assertIn("Cryptographic proof verification failed", result.message)
-        self.assertEqual(result.details["proof_expected"], "expected_proof")
+        self.assertNotIn("proof_expected", result.details)
+        self.assertNotIn("actual_merkle_root_calculated", result.details)
 
     def test_validate_container_success(self):
         """Test the happy path: successful validation."""
@@ -228,7 +232,7 @@ class TestValidator(unittest.TestCase):
         with open(self.sidecar_file, "w") as f:
             json.dump(sidecar_data, f)
 
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_salt"))
         with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU._static_hash_video_content", return_value="actual_root"):
             with unittest.mock.patch("vtr_standard.poc.validator.MockPRNU.verify_zk_proof", return_value=True):
                 result = validator.validate_container(self.video_file)

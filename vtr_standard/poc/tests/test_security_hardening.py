@@ -6,8 +6,38 @@
 import unittest
 import os
 import json
+import sys
+from unittest.mock import MagicMock
+try:
+    import pydantic
+except ImportError:
+    class MockBaseModel:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                if isinstance(v, dict):
+                    setattr(self, k, MockBaseModel(**v))
+                else:
+                    setattr(self, k, v)
+        @classmethod
+        def model_validate(cls, data):
+            return cls(**data)
+        def model_dump_json(self, **kwargs):
+            import json
+            def default(obj):
+                if hasattr(obj, '__dict__'):
+                    return obj.__dict__
+                return str(obj)
+            return json.dumps(self.__dict__, default=default)
+
+    mock_pydantic = MagicMock()
+    mock_pydantic.BaseModel = MockBaseModel
+    mock_pydantic.Field = MagicMock(return_value=None)
+    mock_pydantic.ValidationError = Exception
+    sys.modules["pydantic"] = mock_pydantic
+
 import logging
 from vtr_standard.poc.vtr_container import VTRContainer
+from vtr_standard.poc.config import VTRConfig
 from vtr_standard.poc.validator import VTRValidator
 
 # Configure test logger
@@ -18,6 +48,7 @@ class TestSecurityHardening(unittest.TestCase):
     SIDECAR_PATH = "test_security.mp4.vtr.json"
 
     def setUp(self):
+        os.environ["VTR_KDF_SALT"] = "test_security_salt"
         # Create dummy video
         with open(self.VIDEO_PATH, "wb") as f:
             f.write(b"Security Test Content")
@@ -28,12 +59,13 @@ class TestSecurityHardening(unittest.TestCase):
         if os.path.exists(self.SIDECAR_PATH): os.remove(self.SIDECAR_PATH)
         # Clear env vars
         if "VTR_TEST_LIVENESS" in os.environ: del os.environ["VTR_TEST_LIVENESS"]
+        if "VTR_KDF_SALT" in os.environ: del os.environ["VTR_KDF_SALT"]
 
     def test_tamper_resistance_liveness(self):
         """Test that modifying liveness_flag invalidates the signature."""
         # 1. Sign (with liveness=True)
         os.environ["VTR_TEST_LIVENESS"] = "true"
-        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST")
+        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST", VTRConfig(kdf_salt=b"test_security_salt", test_liveness=os.environ.get("VTR_TEST_LIVENESS")))
         container.create_sidecar()
 
         # 2. Modify sidecar: Set liveness to False
@@ -49,7 +81,7 @@ class TestSecurityHardening(unittest.TestCase):
             json.dump(data, f)
 
         # 3. Verify
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_security_salt", test_liveness=os.environ.get("VTR_TEST_LIVENESS")))
         result = validator.validate_container(self.VIDEO_PATH)
 
         self.assertFalse(result.is_valid)
@@ -59,11 +91,11 @@ class TestSecurityHardening(unittest.TestCase):
         """Test that verification fails if liveness is authentic but False."""
         # 1. Sign with Liveness=False
         os.environ["VTR_TEST_LIVENESS"] = "false"
-        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST")
+        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST", VTRConfig(kdf_salt=b"test_security_salt", test_liveness=os.environ.get("VTR_TEST_LIVENESS")))
         container.create_sidecar()
 
         # 2. Verify
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_security_salt", test_liveness=os.environ.get("VTR_TEST_LIVENESS")))
         result = validator.validate_container(self.VIDEO_PATH)
 
         # 3. Assert failure
@@ -74,7 +106,7 @@ class TestSecurityHardening(unittest.TestCase):
         """Test that modifying location_block_hash invalidates signature."""
         # 1. Sign
         os.environ["VTR_TEST_LIVENESS"] = "true"
-        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST")
+        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST", VTRConfig(kdf_salt=b"test_security_salt", test_liveness=os.environ.get("VTR_TEST_LIVENESS")))
         container.create_sidecar()
 
         # 2. Tamper
@@ -87,7 +119,7 @@ class TestSecurityHardening(unittest.TestCase):
             json.dump(data, f)
 
         # 3. Verify
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_security_salt", test_liveness=os.environ.get("VTR_TEST_LIVENESS")))
         result = validator.validate_container(self.VIDEO_PATH)
 
         self.assertFalse(result.is_valid)
@@ -97,7 +129,7 @@ class TestSecurityHardening(unittest.TestCase):
         """Test that modifying the nonce invalidates the signature."""
         # 1. Sign
         os.environ["VTR_TEST_LIVENESS"] = "true"
-        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST")
+        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST", VTRConfig(kdf_salt=b"test_security_salt", test_liveness=os.environ.get("VTR_TEST_LIVENESS")))
         container.create_sidecar()
 
         # 2. Tamper: Change Nonce
@@ -114,7 +146,7 @@ class TestSecurityHardening(unittest.TestCase):
             json.dump(data, f)
 
         # 3. Verify
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_security_salt", test_liveness=os.environ.get("VTR_TEST_LIVENESS")))
         result = validator.validate_container(self.VIDEO_PATH)
 
         self.assertFalse(result.is_valid)
@@ -123,10 +155,10 @@ class TestSecurityHardening(unittest.TestCase):
     def test_success_path(self):
         """Test normal success path."""
         os.environ["VTR_TEST_LIVENESS"] = "true"
-        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST")
+        container = VTRContainer(self.VIDEO_PATH, "SENSOR_TEST", VTRConfig(kdf_salt=b"test_security_salt", test_liveness=os.environ.get("VTR_TEST_LIVENESS")))
         container.create_sidecar()
 
-        validator = VTRValidator()
+        validator = VTRValidator(VTRConfig(kdf_salt=b"test_security_salt", test_liveness=os.environ.get("VTR_TEST_LIVENESS")))
         result = validator.validate_container(self.VIDEO_PATH)
 
         self.assertTrue(result.is_valid)
