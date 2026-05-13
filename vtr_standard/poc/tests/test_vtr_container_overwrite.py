@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 # VTR-STANDUP: Fallback Mock for restricted environments where pydantic is missing.
 # Sentinel: "Trust nothing, but verify the logic even if the infra is brittle."
 try:
-    import pydantic
+    import pydantic  # noqa: F401
 except ImportError:
     class MockBaseModel:
         def __init__(self, **kwargs):
