@@ -38,10 +38,13 @@ class VTRConfig:
         except ValueError:
             iterations = 100000
 
+        test_liveness = (os.environ.get("VTR_TEST_LIVENESS") or "").strip() or None
+        test_gps = (os.environ.get("VTR_TEST_GPS") or "").strip() or None
+
         return cls(
             kdf_salt=kdf_salt,
             kdf_iterations=iterations,
-            test_liveness=os.environ.get("VTR_TEST_LIVENESS"),
-            test_gps=os.environ.get("VTR_TEST_GPS"),
-            env=os.environ.get("VTR_ENV", "DEVELOPMENT")
+            test_liveness=test_liveness,
+            test_gps=test_gps,
+            env=os.environ.get("VTR_ENV", "DEVELOPMENT").strip().upper()
         )
