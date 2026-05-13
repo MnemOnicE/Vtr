@@ -38,9 +38,8 @@ class TestVTRConfig(unittest.TestCase):
     def test_from_env_empty_salt(self):
         """Test that ValueError is raised when VTR_KDF_SALT is empty."""
         with patch.dict(os.environ, {"VTR_KDF_SALT": ""}, clear=True):
-            with self.assertRaises(ValueError) as cm:
-                VTRConfig.from_env()
-            self.assertIn("VTR_KDF_SALT environment variable is missing", str(cm.exception))
+        with self.assertRaisesRegex(ValueError, "VTR_KDF_SALT environment variable is missing"):
+            VTRConfig.from_env()
 
     def test_from_env_default_iterations(self):
         """Test default iterations when VTR_KDF_ITERATIONS is not set."""
