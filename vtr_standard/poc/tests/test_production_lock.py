@@ -7,11 +7,20 @@ import unittest
 import os
 from unittest.mock import patch
 from vtr_standard.poc.mock_prnu import MockPRNU
+from vtr_standard.poc.config import VTRConfig
 
 class TestProductionLock(unittest.TestCase):
     """
     Tests the Security Hardening: Production Safeguards for MockPRNU.
     """
+
+    def setUp(self):
+        # We need a salt even for production lock tests that reach the KDF block
+        os.environ["VTR_KDF_SALT"] = "lock_test_salt"
+
+    def tearDown(self):
+        if "VTR_KDF_SALT" in os.environ:
+            del os.environ["VTR_KDF_SALT"]
 
     def test_production_lock_active(self):
         """
@@ -19,7 +28,7 @@ class TestProductionLock(unittest.TestCase):
         """
         with patch.dict(os.environ, {"VTR_ENV": "PRODUCTION"}):
             with self.assertRaises(RuntimeError) as cm:
-                MockPRNU("sensor_123")
+                MockPRNU("sensor_123", VTRConfig(kdf_salt=b"lock_test_salt", env=os.environ.get("VTR_ENV", "DEVELOPMENT")))
 
             self.assertIn("CRITICAL SECURITY VIOLATION", str(cm.exception))
             self.assertIn("PRODUCTION environment", str(cm.exception))
@@ -29,16 +38,18 @@ class TestProductionLock(unittest.TestCase):
         Verifies that MockPRNU initializes normally when VTR_ENV is not PRODUCTION.
         """
         # Test default (None)
-        with patch.dict(os.environ, {}, clear=True):
+        # Note: patch.dict(os.environ, {}, clear=True) will clear the setUp salt too.
+        # So we must re-add it or use a less aggressive patch.
+        with patch.dict(os.environ, {"VTR_KDF_SALT": "lock_test_salt"}, clear=True):
              try:
-                MockPRNU("sensor_123")
+                MockPRNU("sensor_123", VTRConfig(kdf_salt=b"lock_test_salt", env=os.environ.get("VTR_ENV", "DEVELOPMENT")))
              except RuntimeError:
                 self.fail("MockPRNU raised RuntimeError unexpectedly without VTR_ENV set")
 
         # Test other values
-        with patch.dict(os.environ, {"VTR_ENV": "DEVELOPMENT"}):
+        with patch.dict(os.environ, {"VTR_ENV": "DEVELOPMENT", "VTR_KDF_SALT": "lock_test_salt"}):
              try:
-                MockPRNU("sensor_123")
+                MockPRNU("sensor_123", VTRConfig(kdf_salt=b"lock_test_salt", env=os.environ.get("VTR_ENV", "DEVELOPMENT")))
              except RuntimeError:
                 self.fail("MockPRNU raised RuntimeError unexpectedly in DEVELOPMENT")
 

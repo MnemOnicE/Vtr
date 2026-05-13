@@ -80,11 +80,19 @@ class MerkleTree:
         hashes = []
         streamer = AsyncFileStream(self.file_path, self.chunk_size)
 
+        # Optimization: Pre-initialize hasher with leaf prefix
+        leaf_hasher = hashlib.sha256()
+        leaf_hasher.update(b'\x00')
+
         for chunk in streamer.stream():
-            hashes.append(hashlib.sha256(b'\x00' + chunk).digest())
+            h = hashlib.sha256(b'\x00')
+            h = leaf_hasher.copy()
+            h.update(chunk)
+            hashes.append(h.digest())
 
         if not hashes:
-            return [hashlib.sha256(b'\x00' + b'').digest()]
+            return [hashlib.sha256(b'\x00').digest()]
+            return [leaf_hasher.digest()]
 
         return hashes
 
@@ -94,6 +102,10 @@ class MerkleTree:
         if not current_level:
             return ""
 
+        # Optimization: Pre-initialize hasher with node prefix
+        node_hasher = hashlib.sha256()
+        node_hasher.update(b'\x01')
+
         while len(current_level) > 1:
             parents = []
             for i in range(0, len(current_level), 2):
@@ -101,8 +113,11 @@ class MerkleTree:
                 # Handle odd number of leaves by duplicating the last one
                 node2 = current_level[i+1] if i + 1 < len(current_level) else node1
 
-                combined = node1 + node2
-                parents.append(hashlib.sha256(b'\x01' + combined).digest())
+                h = hashlib.sha256(b'\x01')
+                h = node_hasher.copy()
+                h.update(node1)
+                h.update(node2)
+                parents.append(h.digest())
             current_level = parents
 
         # Final result is returned as a hex string for public API compatibility

@@ -7,9 +7,11 @@ import hashlib
 import hmac
 import os
 import random
+import secrets
 from typing import Optional
 
 from .merkle import MerkleTree
+from .config import VTRConfig
 
 class MockPRNU:
     """Simulates the Hardware Root of Trust and PRNU (Photo Response Non-Uniformity) logic.
@@ -18,32 +20,25 @@ class MockPRNU:
     with V2.2 schema mock functions (Liveness, Location).
     """
 
-    def __init__(self, sensor_id):
+    def __init__(self, sensor_id, config: VTRConfig):
         """Initializes the MockPRNU instance."""
         self.sensor_id = sensor_id
+        self.config = config
 
         # SECURITY PATCH: Fail if running in PRODUCTION mode
-        if os.environ.get("VTR_ENV") == "PRODUCTION":
+        if self.config.env == "PRODUCTION":
             raise RuntimeError(
                 "CRITICAL SECURITY VIOLATION: MockPRNU loaded in PRODUCTION environment. "
                 "This module is for testing only. Use RealPRNU interface."
             )
 
         # Mock GPS Block used for location hashing.
-        # Check env var for deterministic override: VTR_TEST_GPS
-        self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
+        # SECURITY FIX: Generate a random salt if not provided via config or if provided as empty/whitespace.
+        self.gps_salt = (self.config.test_gps or "").strip() or secrets.token_hex(16)
 
         # Performance Optimization: Pre-calculate and cache static values
-        # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation instead of simple hashing.
-        # Default domain-specific salt and iterations ensure deterministic output while preventing rainbow tables.
-        # These are configurable via environment variables for future-proofing.
-        env_salt = os.environ.get("VTR_KDF_SALT")
-        kdf_salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
-
-        try:
-            iterations = int(os.environ.get("VTR_KDF_ITERATIONS", 100000))
-        except ValueError:
-            iterations = 100000
+        kdf_salt = self.config.kdf_salt
+        iterations = self.config.kdf_iterations
 
         self._cached_public_key = hashlib.pbkdf2_hmac(
             "sha256",
@@ -94,6 +89,7 @@ class MockPRNU:
 
         # 3. Create the Proof
         return self.calculate_expected_proof(
+            config=self.config,
             public_key=verification_key,
             video_hash=video_hash,
             timestamp=timestamp,
@@ -106,9 +102,9 @@ class MockPRNU:
     def check_liveness(self):
         """Simulates the Passive Liveness / Anti-Matrix Check.
 
-        Now supports deterministic control via VTR_TEST_LIVENESS env var.
+        Now supports deterministic control via config.test_liveness.
         """
-        env_liveness = os.environ.get("VTR_TEST_LIVENESS")
+        env_liveness = self.config.test_liveness
         if env_liveness is not None:
             # Accepts "true", "1", "pass" as True; anything else as False (if set)
             return env_liveness.lower() in ("true", "1", "pass")
@@ -127,10 +123,11 @@ class MockPRNU:
         return MerkleTree(video_path).get_root()
 
     @staticmethod
-    def calculate_expected_proof(public_key: str, video_hash: str, timestamp: float, liveness_flag: bool, location_block_hash: str, nonce: str, previous_signature: Optional[str] = None) -> str:
+    def calculate_expected_proof(config: VTRConfig, public_key: str, video_hash: str, timestamp: float, liveness_flag: bool, location_block_hash: str, nonce: str, previous_signature: Optional[str] = None) -> str:
         """Calculates the expected zk_proof string based on the provided inputs.
 
         Args:
+            config (VTRConfig): The VTR configuration object.
             public_key (str): The public verification key.
             video_hash (str): The Merkle Root of the video content.
             timestamp (float): The timestamp of capture.
@@ -154,11 +151,17 @@ class MockPRNU:
             previous_signature or ""
         ])
 
-        proof_hash = hashlib.sha256(data_to_sign.encode()).hexdigest()
+        kdf_salt = config.kdf_salt
+        iterations = config.kdf_iterations
+        proof_hash = hashlib.pbkdf2_hmac(
+            "sha256",
+            data_to_sign.encode(),
+            kdf_salt,
+            iterations
+        ).hex()
         return f"zk_snark_{proof_hash[:16]}"
-
     @staticmethod
-    def verify_zk_proof(public_key, video_path, timestamp, zk_proof, liveness_flag, location_block_hash, nonce, previous_signature=None, video_hash=None):
+    def verify_zk_proof(config: VTRConfig, public_key, video_path, timestamp, zk_proof, liveness_flag, location_block_hash, nonce, previous_signature=None, video_hash=None):
         """Verifies a simulated Zero-Knowledge Proof.
 
         Now requires liveness_flag, location_block_hash, and nonce to reconstruct the hash.
@@ -181,6 +184,7 @@ class MockPRNU:
             video_hash = MockPRNU._static_hash_video_content(video_path)
 
         expected_proof = MockPRNU.calculate_expected_proof(
+            config=config,
             public_key=public_key,
             video_hash=video_hash,
             timestamp=timestamp,

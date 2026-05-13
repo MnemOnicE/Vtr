@@ -8,7 +8,7 @@ version = "0.2.0"
 description = "The Video Truth Record (.vtr) - Hardware-Signed Media Attribution"
 readme = "README.md"
 authors = [
-  { name = "OntoLogics (Seth & Axion)", email = "maintainers@ontologics.com" },
+  { name = "MnemOnicE)", email = "pucewhalez@proton.pm" },
 ]
 license = { text = "VTR Public License (VTR-PL)" }
 classifiers = [
@@ -24,8 +24,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/ontologics/vtr-standard"
-"Bug Tracker" = "https://github.com/ontologics/vtr-standard/issues"
+"Homepage" = "null"
+"Bug Tracker" = "null"
 
 [tool.setuptools.packages.find]
 include = ["vtr_standard*"]
