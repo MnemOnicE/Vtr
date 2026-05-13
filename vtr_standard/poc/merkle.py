@@ -87,10 +87,7 @@ class MerkleTree:
             hashes.append(h.digest())
 
         if not hashes:
-            h = hashlib.sha256()
-            h.update(b'\x00')
-            h.update(b'')
-            return [h.digest()]
+            return [hashlib.sha256(b'\x00').digest()]
 
         return hashes
 
