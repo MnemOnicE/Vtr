@@ -41,7 +41,7 @@ class MockPRNU:
         kdf_salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
 
         try:
-            iterations = int(os.environ.get("VTR_KDF_ITERATIONS", 100000))
+            iterations = max(100000, int(os.environ.get("VTR_KDF_ITERATIONS", 100000)))
         except ValueError:
             iterations = 100000
 
