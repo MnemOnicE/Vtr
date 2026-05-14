@@ -6,7 +6,7 @@
 import hashlib
 import hmac
 import os
-import random
+import secrets
 from typing import Optional
 
 from .merkle import MerkleTree
@@ -114,7 +114,8 @@ class MockPRNU:
             return env_liveness.lower() in ("true", "1", "pass")
 
         # Mock logic: Randomly pass for demo purposes
-        liveness_score = random.uniform(0.8, 1.0)
+        # SECURITY FIX: Use secrets.SystemRandom() for cryptographically secure randomness.
+        liveness_score = secrets.SystemRandom().uniform(0.8, 1.0)
         return liveness_score > 0.9
 
     def calculate_location_block_hash(self):
