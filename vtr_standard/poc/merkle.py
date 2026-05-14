@@ -89,6 +89,12 @@ class MerkleTree:
         if not hashes:
             return [hashlib.sha256(b'\x00').digest()]
 
+        for chunk in streamer.stream():
+            hashes.append(hashlib.sha256(b'\x00' + chunk).digest())
+
+        if not hashes:
+            return [hashlib.sha256(b'\x00' + b'').digest()]
+
         return hashes
 
     def _compute_root(self, leaves: List[bytes]) -> str:
@@ -109,6 +115,8 @@ class MerkleTree:
                 h.update(node1)
                 h.update(node2)
                 parents.append(h.digest())
+                combined = node1 + node2
+                parents.append(hashlib.sha256(b'\x01' + combined).digest())
             current_level = parents
 
         # Final result is returned as a hex string for public API compatibility

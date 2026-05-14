@@ -4,39 +4,9 @@
 # This code is distributed WITHOUT ANY WARRANTY.
 
 import os
-import sys
 import json
 import unittest
 from unittest.mock import MagicMock
-
-# VTR-STANDUP: Fallback Mock for restricted environments where pydantic is missing.
-try:
-    import pydantic
-except ImportError:
-    class MockBaseModel:
-        def __init__(self, **kwargs):
-            for k, v in kwargs.items():
-                if isinstance(v, dict):
-                    setattr(self, k, MockBaseModel(**v))
-                else:
-                    setattr(self, k, v)
-        @classmethod
-        def model_validate(cls, data):
-            return cls(**data)
-        def model_dump_json(self, **kwargs):
-            import json
-            def default(obj):
-                if hasattr(obj, '__dict__'):
-                    return obj.__dict__
-                return str(obj)
-            return json.dumps(self.__dict__, default=default)
-
-    mock_pydantic = MagicMock()
-    mock_pydantic.BaseModel = MockBaseModel
-    mock_pydantic.Field = MagicMock(return_value=None)
-    mock_pydantic.ValidationError = type("ValidationError", (Exception,), {})
-    sys.modules["pydantic"] = mock_pydantic
-
 from vtr_standard.poc.validator import VTRValidator, ValidationError
 
 class TestValidator(unittest.TestCase):
@@ -70,7 +40,6 @@ class TestValidator(unittest.TestCase):
     def test_log_injection_prevention(self):
         """Test that ValidationError with newlines is sanitized in logs."""
         # We need to mock the validation to raise a ValidationError with newlines
-        # since we can't easily rely on pydantic in this environment.
         from vtr_standard.poc.validator import VTRValidator, ValidationError
 
         validator = VTRValidator()

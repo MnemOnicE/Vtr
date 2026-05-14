@@ -46,7 +46,7 @@ The repository is organized as follows:
 Clone the repository and install the package:
 
 ```bash
-git clone https://github.com/ontologics/vtr-standard.git
+git clone https://github.com/mnemonice/vtr-standard.git
 cd vtr-standard
 pip install .
 ```
