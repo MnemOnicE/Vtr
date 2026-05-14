@@ -51,6 +51,8 @@ class VTRValidator:
         """
         # 1. Resolve Sidecar Path
         if sidecar_path is None:
+            sidecar_path = os.path.abspath(f"{video_path}.vtr.json")
+        video_path = os.path.abspath(video_path)
             sidecar_path = f"{video_path}.vtr.json"
 
         # 2. Check File Existence
