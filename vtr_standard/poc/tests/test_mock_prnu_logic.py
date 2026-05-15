@@ -43,11 +43,11 @@ class TestMockPRNU(unittest.TestCase):
 
     def test_static_hash_video_content(self):
         """Verifies _static_hash_video_content returns a valid 64-char hex string."""
-        test_file = "dummy_video_for_hash.mp4"
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".mp4", delete=False) as tmp:
+            tmp.write(b"dummy video data for hashing test")
+            test_file = tmp.name
         try:
-            with open(test_file, "wb") as f:
-                f.write(b"dummy video data for hashing test")
-
             hash_result = MockPRNU._static_hash_video_content(test_file)
 
             self.assertIsInstance(hash_result, str)
