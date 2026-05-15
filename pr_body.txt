@@ -1,0 +1,11 @@
+🎯 **What:**
+The `stream` generator method inside the `AsyncFileStream` class in `vtr_standard/poc/merkle.py` was previously completely untested. The background thread file reading lacked test coverage for how it queues and yields chunks to the Merkle tree consumer, as well as the behavior when encountering edge cases such as empty streams and thread lifecycle exhaustion.
+
+📊 **Coverage:**
+- Added `test_stream_yields_chunks`: Verifies the "happy path" logic where `stream()` consumes byte chunks sequentially and terminates at the `None` sentinel.
+- Added `test_stream_empty`: Covers the boundary condition of an immediate `None` indicating file emptiness, ensuring no chunks are yielded.
+- Added `test_stream_called_twice_raises_runtime_error`: Secures an adversarial "sad path" showing that attempting to exhaust the stream more than once per `AsyncFileStream` instance rightly triggers a `RuntimeError` due to standard threading constraints.
+- Mocked out `threading.Thread.start` to isolate queue yielding behavior reliably without creating actual OS-level threads reading dummy files in test environments.
+
+✨ **Result:**
+The previously uncovered generator implementation of `AsyncFileStream` now has complete deterministic test coverage validating yielding behavior, sentinel handling, and thread safety guardrails. This builds confidence in file ingestion performance during Merkle hashing and mitigates regression risks.
