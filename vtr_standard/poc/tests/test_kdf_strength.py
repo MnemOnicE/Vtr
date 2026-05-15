@@ -58,6 +58,7 @@ class TestKDFStrength(unittest.TestCase):
 
         # Cleanup
         del os.environ["VTR_KDF_SALT"]
+        MockPRNU._get_kdf_params.cache_clear()
         del os.environ["VTR_KDF_ITERATIONS"]
         MockPRNU._get_kdf_params.cache_clear()
         MockPRNU._derive_pbkdf2.cache_clear()
@@ -104,6 +105,9 @@ class TestKDFStrength(unittest.TestCase):
             prnu_attack = MockPRNU(sensor_id)
             pk_attack = prnu_attack.get_public_key()
 
+        # Cleanup
+        del os.environ["VTR_KDF_ITERATIONS"]
+        MockPRNU._get_kdf_params.cache_clear()
         self.assertEqual(pk_default, pk_attack, "Downgrade attack should be mitigated by enforcing minimum iterations")
 
 if __name__ == "__main__":

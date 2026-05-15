@@ -110,6 +110,7 @@ class TestMockPRNU(unittest.TestCase):
             prnu_salted = MockPRNU(sensor_id)
             hash_salted = prnu_salted.calculate_location_block_hash()
             self.assertNotEqual(hash1, hash_salted, "Hash should change with VTR_KDF_SALT override")
+        MockPRNU._get_kdf_params.cache_clear()
 
 if __name__ == "__main__":
     unittest.main()
