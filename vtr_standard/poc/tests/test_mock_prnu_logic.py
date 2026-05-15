@@ -48,13 +48,13 @@ class TestMockPRNU(unittest.TestCase):
         prnu = MockPRNU("sensor_123")
 
         # Truthy cases (case-insensitive)
-        truthy_values = ["true", "1", "pass", "TRUE", "Pass"]
+        truthy_values = ["true", "1", "pass", "TRUE", "Pass", " true ", " pass\n"]
         for val in truthy_values:
             with patch.dict(os.environ, {"VTR_TEST_LIVENESS": val}):
                 self.assertTrue(prnu.check_liveness(), f"Expected True for '{val}'")
 
         # Falsy and edge cases
-        falsy_values = ["false", "0", "fail", "random", "", " true "]
+        falsy_values = ["false", "0", "fail", "random", "", " false "]
         for val in falsy_values:
             with patch.dict(os.environ, {"VTR_TEST_LIVENESS": val}):
                 self.assertFalse(prnu.check_liveness(), f"Expected False for '{val}'")

@@ -38,7 +38,7 @@ class TestKDFStrength(unittest.TestCase):
         # Original keys
         MockPRNU._get_kdf_params.cache_clear()
         MockPRNU._derive_pbkdf2.cache_clear()
-        with patch.dict(os.environ, {}):
+        with patch.dict(os.environ, {}, clear=True):
             prnu_default = MockPRNU(sensor_id)
             pk_default = prnu_default.get_public_key()
 
