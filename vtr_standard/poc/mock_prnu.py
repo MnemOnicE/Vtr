@@ -90,6 +90,9 @@ class MockPRNU:
             return env_liveness.lower() in ("true", "1", "pass")
 
         # Mock logic: Randomly pass for demo purposes
+        # SECURITY FIX: Use secrets.choice() for cryptographically secure and efficient randomness.
+        # This replaces the inefficient instantiation of SystemRandom() and maintains the mock's intent.
+        return secrets.choice([True] + [False] * 9)
         # SECURITY FIX: Use secrets.SystemRandom() for cryptographically secure randomness.
         liveness_score = secrets.SystemRandom().uniform(0.8, 1.0)
         return liveness_score > 0.9

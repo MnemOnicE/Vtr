@@ -31,6 +31,8 @@ class TestMockPRNU(unittest.TestCase):
         old_liveness = os.environ.pop("VTR_TEST_LIVENESS", None)
         try:
             prnu = MockPRNU("sensor_123")
+            result = prnu.check_liveness()
+            self.assertIsInstance(result, bool)
             # Run multiple times to ensure both outcomes are possible (50% probability each)
             results = {prnu.check_liveness() for _ in range(100)}
             self.assertEqual(results, {True, False})
