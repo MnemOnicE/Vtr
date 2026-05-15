@@ -41,6 +41,22 @@ class TestMockPRNU(unittest.TestCase):
             if old_liveness is not None:
                 os.environ["VTR_TEST_LIVENESS"] = old_liveness
 
+    def test_static_hash_video_content(self):
+        """Verifies _static_hash_video_content returns a valid 64-char hex string."""
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".mp4", delete=False) as tmp:
+            tmp.write(b"dummy video data for hashing test")
+            test_file = tmp.name
+        try:
+            hash_result = MockPRNU._static_hash_video_content(test_file)
+
+            self.assertIsInstance(hash_result, str)
+            self.assertEqual(len(hash_result), 64)
+            # Verify it's a valid hex string
+            int(hash_result, 16)
+        finally:
+            if os.path.exists(test_file):
+                os.remove(test_file)
     def test_check_liveness_env_var(self):
         """Verifies check_liveness respects VTR_TEST_LIVENESS env var explicitly."""
         from unittest.mock import patch
@@ -86,6 +102,8 @@ class TestMockPRNU(unittest.TestCase):
 
         # 3. Test KDF Binding (VTR_KDF_SALT)
         # The location hash is derived using the same KDF salt as the public key.
+        with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}):
+            MockPRNU._get_kdf_params.cache_clear()
         MockPRNU._get_kdf_params.cache_clear()
         MockPRNU._derive_pbkdf2.cache_clear()
         with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}, clear=True):
