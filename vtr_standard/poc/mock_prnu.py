@@ -12,7 +12,6 @@ from typing import Optional
 
 from .merkle import MerkleTree
 
-
 class MockPRNU:
     """Simulates the Hardware Root of Trust and PRNU (Photo Response Non-Uniformity) logic.
 
@@ -28,7 +27,8 @@ class MockPRNU:
         if os.environ.get("VTR_ENV") == "PRODUCTION":
             raise RuntimeError(
                 "CRITICAL SECURITY VIOLATION: MockPRNU loaded in PRODUCTION environment. "
-                "This module is for testing only. Use RealPRNU interface.")
+                "This module is for testing only. Use RealPRNU interface."
+            )
 
         # Mock GPS Block used for location hashing.
         # Check env var for deterministic override: VTR_TEST_GPS
@@ -39,24 +39,17 @@ class MockPRNU:
 
     def get_public_key(self):
         """Derives a simulated Public Verification Key from the sensor ID."""
-        return self._derive_pbkdf2(
-            self.sensor_id,
-            self._kdf_salt,
-            self._kdf_iterations)
+        return self._derive_pbkdf2(self.sensor_id, self._kdf_salt, self._kdf_iterations)
+    def get_public_key(self):
+        """Derives a simulated Public Verification Key from the sensor ID."""
+        salt, iterations = self._get_kdf_params()
+        return self._derive_pbkdf2(self.sensor_id, salt, iterations)
 
     def _hash_video_content(self, video_path):
         """Calculates the Merkle Root of the video file content."""
         return MockPRNU._static_hash_video_content(video_path)
 
-    def generate_zk_proof(
-            self,
-            video_path,
-            timestamp,
-            liveness_flag,
-            location_block_hash,
-            nonce,
-            previous_signature=None,
-            video_hash=None):
+    def generate_zk_proof(self, video_path, timestamp, liveness_flag, location_block_hash, nonce, previous_signature=None, video_hash=None):
         """Simulates generating a Zero-Knowledge Proof (ZKP) for V2.0.
 
         Binds the Verification Key, Merkle Root, Timestamp, Liveness, Location,
@@ -99,26 +92,31 @@ class MockPRNU:
         """
         env_liveness = os.environ.get("VTR_TEST_LIVENESS")
         if env_liveness is not None:
-            # Accepts "true", "1", "pass" as True; anything else as False (if
-            # set)
+            # Accepts "true", "1", "pass" as True; anything else as False (if set)
             return env_liveness.strip().lower() in ("true", "1", "pass")
 
         # Mock logic: Randomly pass for demo purposes
         # SECURITY FIX: Use secrets.choice() for cryptographically secure and efficient randomness.
-        # This replaces the inefficient instantiation of SystemRandom() and
-        # maintains the mock's intent.
+        # This replaces the inefficient instantiation of SystemRandom() and maintains the mock's intent.
         return secrets.choice([True] + [False] * 9)
-        # SECURITY FIX: Use secrets.SystemRandom() for cryptographically secure
-        # randomness.
+        # SECURITY FIX: Use secrets.SystemRandom() for cryptographically secure randomness.
         liveness_score = secrets.SystemRandom().uniform(0.8, 1.0)
         return liveness_score > 0.9
 
     def calculate_location_block_hash(self):
         """Calculates the hash of the location data (salted)."""
-        return self._derive_pbkdf2(
-            self.gps_salt,
-            self._kdf_salt,
-            self._kdf_iterations)
+        return self._derive_pbkdf2(self.gps_salt, self._kdf_salt, self._kdf_iterations)
+
+    @staticmethod
+    def _get_kdf_params():
+        """Centralized helper to retrieve KDF parameters from the environment.
+
+        Returns:
+            tuple: A (salt: bytes, iterations: int) tuple derived from
+                VTR_KDF_SALT and VTR_KDF_ITERATIONS env vars.
+        """
+        salt, iterations = self._get_kdf_params()
+        return self._derive_pbkdf2(self.gps_salt, salt, iterations)
 
     @staticmethod
     @functools.lru_cache(maxsize=1)
@@ -127,10 +125,7 @@ class MockPRNU:
         env_salt = os.environ.get("VTR_KDF_SALT")
         salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
         try:
-            iterations = max(
-                100000, int(
-                    os.environ.get(
-                        "VTR_KDF_ITERATIONS", 100000)))
+            iterations = max(100000, int(os.environ.get("VTR_KDF_ITERATIONS", 100000)))
         except ValueError:
             iterations = 100000
         return salt, iterations
@@ -162,14 +157,7 @@ class MockPRNU:
         return MerkleTree(video_path).get_root()
 
     @staticmethod
-    def calculate_expected_proof(
-            public_key: str,
-            video_hash: str,
-            timestamp: float,
-            liveness_flag: bool,
-            location_block_hash: str,
-            nonce: str,
-            previous_signature: Optional[str] = None) -> str:
+    def calculate_expected_proof(public_key: str, video_hash: str, timestamp: float, liveness_flag: bool, location_block_hash: str, nonce: str, previous_signature: Optional[str] = None) -> str:
         """Calculates the expected zk_proof string based on the provided inputs.
 
         Args:
@@ -184,10 +172,9 @@ class MockPRNU:
         Returns:
             str: The expected zk_proof string.
         """
-        # Security Fix: Use length-prefixed strings to prevent canonicalization attacks
-        # We cast liveness_flag (bool) to lowercase string for consistent
-        # hashing.
-        fields = [
+        # Optimization: Use "|".join() for faster concatenation.
+        # We cast liveness_flag (bool) to lowercase string for consistent hashing.
+        data_to_sign = "|".join([
             public_key,
             str(timestamp),
             video_hash,
@@ -195,25 +182,13 @@ class MockPRNU:
             location_block_hash,
             nonce,
             previous_signature or ""
-        ]
-
-        # Format as: length:value
-        data_to_sign = "".join(f"{len(str(f))}:{f}" for f in fields)
+        ])
 
         proof_hash = hashlib.sha256(data_to_sign.encode()).hexdigest()
         return f"zk_snark_{proof_hash[:16]}"
 
     @staticmethod
-    def verify_zk_proof(
-            public_key,
-            video_path,
-            timestamp,
-            zk_proof,
-            liveness_flag,
-            location_block_hash,
-            nonce,
-            previous_signature=None,
-            video_hash=None):
+    def verify_zk_proof(public_key, video_path, timestamp, zk_proof, liveness_flag, location_block_hash, nonce, previous_signature=None, video_hash=None):
         """Verifies a simulated Zero-Knowledge Proof.
 
         Now requires liveness_flag, location_block_hash, and nonce to reconstruct the hash.

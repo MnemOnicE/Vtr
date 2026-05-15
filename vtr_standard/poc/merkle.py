@@ -99,18 +99,17 @@ class MerkleTree:
 
         internal_hasher = hashlib.sha256(b'\x01')
         while len(current_level) > 1:
-            next_len = (len(current_level) + 1) // 2
-            for i in range(next_len):
-                idx = i * 2
-                node1 = current_level[idx]
+            parents = []
+            for i in range(0, len(current_level), 2):
+                node1 = current_level[i]
                 # Handle odd number of leaves by duplicating the last one
-                node2 = current_level[idx+1] if idx + 1 < len(current_level) else node1
+                node2 = current_level[i+1] if i + 1 < len(current_level) else node1
 
                 h = internal_hasher.copy()
                 h.update(node1)
                 h.update(node2)
-                current_level[i] = h.digest()
-            del current_level[next_len:]
+                parents.append(h.digest())
+            current_level = parents
 
         # Final result is returned as a hex string for public API compatibility
         return current_level[0].hex()

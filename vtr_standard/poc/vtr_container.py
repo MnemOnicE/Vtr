@@ -7,7 +7,7 @@ import json
 import time
 import os
 import logging
-import secrets
+import uuid
 from .mock_prnu import MockPRNU
 from .schemas import VTRSidecar, HardwareSignature, LegalAssertions
 
@@ -85,7 +85,7 @@ class VTRContainer:
         location_block_hash = self.prnu.calculate_location_block_hash()
 
         # Generate Nonce for Replay Protection
-        nonce = secrets.token_hex(16)
+        nonce = uuid.uuid4().hex
 
         # Calculate Merkle Root once to optimize IO
         actual_merkle_root = self.prnu._hash_video_content(self.video_path)
