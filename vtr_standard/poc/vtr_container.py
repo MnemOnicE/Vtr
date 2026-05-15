@@ -137,9 +137,6 @@ def ensure_dummy_video(filename):
     Generates a 1MB file of random bytes to simulate video content.
     """
     if not os.path.exists(filename):
-        parent_dir = os.path.dirname(filename)
-        if parent_dir:
-            os.makedirs(parent_dir, exist_ok=True)
         logger.info(f"🎥 Generating dummy video file: {filename}")
         # Generate 1MB of random bytes to simulate video content
         with open(filename, 'wb') as f:
