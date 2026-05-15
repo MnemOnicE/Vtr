@@ -42,7 +42,6 @@ class VTRValidator:
         with open(sidecar_path, 'r') as f:
             raw_data = json.load(f)
         return VTRSidecar.model_validate(raw_data)
-
     def _verify_crypto_binding(self, sidecar: VTRSidecar, video_path: str) -> VerificationResult:
         hw_sig = sidecar.hardware_signature
 
