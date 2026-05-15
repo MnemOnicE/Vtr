@@ -99,6 +99,7 @@ class MockPRNU:
         return self._derive_pbkdf2(self.gps_salt, salt, iterations)
 
     @staticmethod
+    @functools.lru_cache(maxsize=1)
     def _get_kdf_params():
         """Centralized helper to retrieve KDF parameters from the environment."""
         env_salt = os.environ.get("VTR_KDF_SALT")
