@@ -93,7 +93,7 @@ class MockPRNU:
         env_liveness = os.environ.get("VTR_TEST_LIVENESS")
         if env_liveness is not None:
             # Accepts "true", "1", "pass" as True; anything else as False (if set)
-            return env_liveness.lower() in ("true", "1", "pass")
+            return env_liveness.strip().lower() in ("true", "1", "pass")
 
         # Mock logic: Randomly pass for demo purposes
         # SECURITY FIX: Use secrets.choice() for cryptographically secure and efficient randomness.
