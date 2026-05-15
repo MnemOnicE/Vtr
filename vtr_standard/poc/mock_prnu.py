@@ -34,6 +34,12 @@ class MockPRNU:
         # Check env var for deterministic override: VTR_TEST_GPS
         self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
 
+        # Snapshot KDF parameters to ensure instance stability
+        self._kdf_salt, self._kdf_iterations = self._get_kdf_params()
+
+    def get_public_key(self):
+        """Derives a simulated Public Verification Key from the sensor ID."""
+        return self._derive_pbkdf2(self.sensor_id, self._kdf_salt, self._kdf_iterations)
     def get_public_key(self):
         """Derives a simulated Public Verification Key from the sensor ID."""
         salt, iterations = self._get_kdf_params()
@@ -99,6 +105,16 @@ class MockPRNU:
 
     def calculate_location_block_hash(self):
         """Calculates the hash of the location data (salted)."""
+        return self._derive_pbkdf2(self.gps_salt, self._kdf_salt, self._kdf_iterations)
+
+    @staticmethod
+    def _get_kdf_params():
+        """Centralized helper to retrieve KDF parameters from the environment.
+
+        Returns:
+            tuple: A (salt: bytes, iterations: int) tuple derived from
+                VTR_KDF_SALT and VTR_KDF_ITERATIONS env vars.
+        """
         salt, iterations = self._get_kdf_params()
         return self._derive_pbkdf2(self.gps_salt, salt, iterations)
 
@@ -117,6 +133,16 @@ class MockPRNU:
     @staticmethod
     @functools.lru_cache(maxsize=128)
     def _derive_pbkdf2(data: str, salt: bytes, iterations: int) -> str:
+        """Derives a hex string using PBKDF2-HMAC-SHA256 with caching.
+
+        Args:
+            data (str): The input string to be hashed.
+            salt (bytes): The salt used for PBKDF2.
+            iterations (int): The number of PBKDF2 iterations.
+
+        Returns:
+            str: The hex string of the derived PBKDF2-HMAC-SHA256 key.
+        """
         """Derives a hex string using PBKDF2-HMAC-SHA256 with caching."""
         return hashlib.pbkdf2_hmac(
             "sha256",
