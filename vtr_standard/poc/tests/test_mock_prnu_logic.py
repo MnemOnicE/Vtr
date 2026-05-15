@@ -25,5 +25,18 @@ class TestMockPRNU(unittest.TestCase):
         # Cleanup
         os.remove("test.mp4")
 
+    def test_check_liveness_random(self):
+        """Verifies that check_liveness returns a boolean when env var is unset."""
+        # Ensure VTR_TEST_LIVENESS is not in environment
+        old_liveness = os.environ.pop("VTR_TEST_LIVENESS", None)
+        try:
+            prnu = MockPRNU("sensor_123")
+            result = prnu.check_liveness()
+            self.assertIsInstance(result, bool)
+        finally:
+            # Restore environment
+            if old_liveness is not None:
+                os.environ["VTR_TEST_LIVENESS"] = old_liveness
+
 if __name__ == "__main__":
     unittest.main()
