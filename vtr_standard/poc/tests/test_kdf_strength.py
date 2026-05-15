@@ -43,6 +43,22 @@ class TestKDFStrength(unittest.TestCase):
             pk_default = prnu_default.get_public_key()
 
         # Keys with custom salt
+        os.environ["VTR_KDF_SALT"] = "custom_salt"
+        MockPRNU._get_kdf_params.cache_clear()
+        prnu_custom_salt = MockPRNU(sensor_id)
+        pk_custom_salt = prnu_custom_salt.get_public_key()
+        self.assertNotEqual(pk_default, pk_custom_salt)
+
+        # Keys with custom iterations
+        os.environ["VTR_KDF_ITERATIONS"] = "200000"
+        MockPRNU._get_kdf_params.cache_clear()
+        prnu_custom_iter = MockPRNU(sensor_id)
+        pk_custom_iter = prnu_custom_iter.get_public_key()
+        self.assertNotEqual(pk_custom_salt, pk_custom_iter)
+
+        # Cleanup
+        del os.environ["VTR_KDF_SALT"]
+        del os.environ["VTR_KDF_ITERATIONS"]
         MockPRNU._get_kdf_params.cache_clear()
         MockPRNU._derive_pbkdf2.cache_clear()
         with patch.dict(os.environ, {"VTR_KDF_SALT": "custom_salt"}, clear=True):
@@ -64,6 +80,17 @@ class TestKDFStrength(unittest.TestCase):
         sensor_id = "downgrade_sensor"
 
         # Test default
+        if "VTR_KDF_ITERATIONS" in os.environ:
+            del os.environ["VTR_KDF_ITERATIONS"]
+        MockPRNU._get_kdf_params.cache_clear()
+        prnu_default = MockPRNU(sensor_id)
+        pk_default = prnu_default.get_public_key()
+
+        # Test attack - should use 100000 instead of 1
+        os.environ["VTR_KDF_ITERATIONS"] = "1"
+        MockPRNU._get_kdf_params.cache_clear()
+        prnu_attack = MockPRNU(sensor_id)
+        pk_attack = prnu_attack.get_public_key()
         MockPRNU._get_kdf_params.cache_clear()
         MockPRNU._derive_pbkdf2.cache_clear()
         with patch.dict(os.environ, {}, clear=True):
