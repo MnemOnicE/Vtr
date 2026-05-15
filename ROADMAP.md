@@ -14,7 +14,7 @@
 - [ ] **Decentralized Storage**: Formalize support for storing large VTR container payloads (bundled media and proofs) on decentralized networks like IPFS or Arweave, storing only hashes/URIs in the VTR standard (Future RFC).
 
 ### 3. Ecosystem & Standardization
-- [ ] **Conformance Test Suite**: Create a language-agnostic "Conformance Test Vector" repository with pre-calculated dummy images, PRNU signatures, and valid/invalid containers for developers building VTR clients in Go, TypeScript, Swift, etc.
+- [ ] **Conformance Test Suite**: Create a language-agnostic "Conformance Test Vectors" repository with pre-calculated dummy images, PRNU signatures, and valid/invalid containers for developers building VTR clients in Go, TypeScript, Swift, etc.
 - [ ] **Hardware Enclave (TEE) Support**: Draft RFC-003 to include specifications for extracting and signing data directly within a device's Trusted Execution Environment (e.g., Apple Secure Enclave, ARM TrustZone) to provide hardware-signed attestation combined with PRNU matches.
 
 ## ✅ Completed
