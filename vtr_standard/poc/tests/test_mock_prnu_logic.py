@@ -25,6 +25,19 @@ class TestMockPRNU(unittest.TestCase):
         # Cleanup
         os.remove("test.mp4")
 
+    def test_check_liveness_random(self):
+        """Verifies that check_liveness returns a boolean when env var is unset."""
+        # Ensure VTR_TEST_LIVENESS is not in environment
+        old_liveness = os.environ.pop("VTR_TEST_LIVENESS", None)
+        try:
+            prnu = MockPRNU("sensor_123")
+            # Run multiple times to ensure both outcomes are possible (50% probability each)
+            results = {prnu.check_liveness() for _ in range(100)}
+            self.assertEqual(results, {True, False})
+        finally:
+            # Restore environment
+            if old_liveness is not None:
+                os.environ["VTR_TEST_LIVENESS"] = old_liveness
     def test_location_block_hash_logic(self):
         """Tests that location block hash is deterministic and configurable."""
         from unittest.mock import patch
