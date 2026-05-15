@@ -29,7 +29,7 @@ This standard is designed for **Security Cameras, Dashcams, and Trusted User Dev
 
 ## Roadmap
 
-We are actively working on advancing the VTR standard towards production readiness, incorporating features such as high-performance implementations, Zero-Knowledge Proofs for privacy, decentralized storage and data anchoring, and hardware enclave (TEE) support.
+We are planning to advance the VTR standard towards production readiness by incorporating features such as high-performance implementations, Zero-Knowledge Proofs for privacy, decentralized storage, data anchoring, a conformance test suite, and hardware enclave (TEE) support.
 
 See the full [ROADMAP.md](ROADMAP.md) for details on planned features and ongoing development.
 
