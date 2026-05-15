@@ -2,8 +2,13 @@ Directory structure:
 └── app/
     ├── README.md
     ├── AGENTS.md
+    ├── fix_test.py
     ├── fix_validator.py
     ├── LICENSE
+    ├── patch_test.py
+    ├── patch_test2.py
+    ├── patch_test_kdf.py
+    ├── patch_test_kdf2.py
     ├── pyproject.toml
     ├── ROADMAP.md
     ├── docs/
@@ -84,12 +89,6 @@ This standard is designed for **Security Cameras, Dashcams, and Trusted User Dev
 *   **Tamper-Evident Container:** Merkle Tree hashing ensures frame-by-frame integrity.
 *   **Chain of Custody:** "Blockchain-style" linking of file signatures provides audit trails for legal and security contexts.
 *   **Liveness Detection:** Protocol support for hardware-level liveness checks (e.g., 3D depth, gyro) to prevent screen recording attacks.
-
-## Roadmap
-
-We are actively working on advancing the VTR standard towards production readiness, incorporating features such as high-performance implementations, Zero-Knowledge Proofs for privacy, decentralized storage and data anchoring, and hardware enclave (TEE) support.
-
-See the full [ROADMAP.md](ROADMAP.md) for details on planned features and ongoing development.
 
 ## Repository Structure
 
@@ -308,6 +307,49 @@ When the user provides a Topic, Code, or Dilemma, execute the following workflow
 
 
 ================================================
+FILE: fix_test.py
+================================================
+import os
+import unittest
+from unittest.mock import patch
+from vtr_standard.poc.mock_prnu import MockPRNU
+
+class TestMockPRNULogic(unittest.TestCase):
+    def test_location_block_hash_logic(self):
+        """Tests that location block hash is deterministic and configurable."""
+        sensor_id = "sensor_123"
+
+        # 1. Test Default Stability
+        prnu1 = MockPRNU(sensor_id)
+        hash1 = prnu1.calculate_location_block_hash()
+        self.assertEqual(len(hash1), 64, "Hash should be 64-char hex string (SHA256)")
+
+        prnu2 = MockPRNU(sensor_id)
+        self.assertEqual(hash1, prnu2.calculate_location_block_hash(), "Hash should be deterministic")
+
+        # 2. Test VTR_TEST_GPS override
+        custom_gps = "40.7128,-74.0060" # NYC
+        with patch.dict(os.environ, {"VTR_TEST_GPS": custom_gps}):
+            prnu_nyc = MockPRNU(sensor_id)
+            hash_nyc = prnu_nyc.calculate_location_block_hash()
+            self.assertNotEqual(hash1, hash_nyc, "Hash should change with VTR_TEST_GPS override")
+
+            # Verify consistency for same override
+            prnu_nyc_2 = MockPRNU(sensor_id)
+            self.assertEqual(hash_nyc, prnu_nyc_2.calculate_location_block_hash())
+
+        # 3. Test KDF Binding (VTR_KDF_SALT)
+        # The location hash is derived using the same KDF salt as the public key.
+        with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}):
+            MockPRNU._get_kdf_params.cache_clear()
+            prnu_salted = MockPRNU(sensor_id)
+            hash_salted = prnu_salted.calculate_location_block_hash()
+            self.assertNotEqual(hash1, hash_salted, "Hash should change with VTR_KDF_SALT override")
+
+
+
+
+================================================
 FILE: fix_validator.py
 ================================================
 with open("vtr_standard/poc/validator.py", "r") as f:
@@ -349,6 +391,83 @@ All source code located in `vtr-standard/poc/` is licensed under the **VTR Publi
 *   **Run the code?** You must stay open and interoperable.
 
 *See specific `LICENSE` files in subdirectories for full legal texts.*
+
+
+
+================================================
+FILE: patch_test.py
+================================================
+import re
+
+with open('vtr_standard/poc/tests/test_mock_prnu_logic.py', 'r') as f:
+    content = f.read()
+
+content = content.replace('        with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}):\n            prnu_salted = MockPRNU(sensor_id)', '        with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}):\n            MockPRNU._get_kdf_params.cache_clear()\n            prnu_salted = MockPRNU(sensor_id)')
+
+with open('vtr_standard/poc/tests/test_mock_prnu_logic.py', 'w') as f:
+    f.write(content)
+
+
+
+================================================
+FILE: patch_test2.py
+================================================
+with open('vtr_standard/poc/tests/test_mock_prnu_logic.py', 'r') as f:
+    content = f.read()
+
+new_test = """
+    def test_static_hash_video_content(self):
+        \"\"\"Verifies _static_hash_video_content returns a valid 64-char hex string.\"\"\"
+        test_file = "dummy_video_for_hash.mp4"
+        try:
+            with open(test_file, "wb") as f:
+                f.write(b"dummy video data for hashing test")
+
+            hash_result = MockPRNU._static_hash_video_content(test_file)
+
+            self.assertIsInstance(hash_result, str)
+            self.assertEqual(len(hash_result), 64)
+            # Verify it's a valid hex string
+            int(hash_result, 16)
+        finally:
+            if os.path.exists(test_file):
+                os.remove(test_file)
+"""
+
+# Insert before test_location_block_hash_logic
+content = content.replace('    def test_location_block_hash_logic(self):', new_test + '\n    def test_location_block_hash_logic(self):')
+
+with open('vtr_standard/poc/tests/test_mock_prnu_logic.py', 'w') as f:
+    f.write(content)
+
+
+
+================================================
+FILE: patch_test_kdf.py
+================================================
+with open('vtr_standard/poc/tests/test_kdf_strength.py', 'r') as f:
+    content = f.read()
+
+content = content.replace('        # Keys with custom salt\n        os.environ["VTR_KDF_SALT"] = "custom_salt"\n        prnu_custom_salt = MockPRNU(sensor_id)', '        # Keys with custom salt\n        os.environ["VTR_KDF_SALT"] = "custom_salt"\n        MockPRNU._get_kdf_params.cache_clear()\n        prnu_custom_salt = MockPRNU(sensor_id)')
+content = content.replace('        # Keys with custom iterations\n        os.environ["VTR_KDF_ITERATIONS"] = "200000"\n        prnu_custom_iter = MockPRNU(sensor_id)', '        # Keys with custom iterations\n        os.environ["VTR_KDF_ITERATIONS"] = "200000"\n        MockPRNU._get_kdf_params.cache_clear()\n        prnu_custom_iter = MockPRNU(sensor_id)')
+content = content.replace('        # Test attack - should use 100000 instead of 1\n        os.environ["VTR_KDF_ITERATIONS"] = "1"\n        prnu_attack = MockPRNU(sensor_id)', '        # Test attack - should use 100000 instead of 1\n        os.environ["VTR_KDF_ITERATIONS"] = "1"\n        MockPRNU._get_kdf_params.cache_clear()\n        prnu_attack = MockPRNU(sensor_id)')
+
+
+with open('vtr_standard/poc/tests/test_kdf_strength.py', 'w') as f:
+    f.write(content)
+
+
+
+================================================
+FILE: patch_test_kdf2.py
+================================================
+with open('vtr_standard/poc/tests/test_kdf_strength.py', 'r') as f:
+    content = f.read()
+
+content = content.replace('        if "VTR_KDF_ITERATIONS" in os.environ:\n            del os.environ["VTR_KDF_ITERATIONS"]\n        prnu_default = MockPRNU(sensor_id)', '        if "VTR_KDF_ITERATIONS" in os.environ:\n            del os.environ["VTR_KDF_ITERATIONS"]\n        MockPRNU._get_kdf_params.cache_clear()\n        prnu_default = MockPRNU(sensor_id)')
+
+with open('vtr_standard/poc/tests/test_kdf_strength.py', 'w') as f:
+    f.write(content)
 
 
 
@@ -398,18 +517,7 @@ FILE: ROADMAP.md
 - [ ] (None)
 
 ## 📅 Planned
-
-### 1. Advancing the Core Technology (From PoC to Production)
-- [ ] **High-Performance Implementation (Rust or C++)**: Port the core cryptographic and PRNU extraction logic to Rust or C++ for better performance and memory safety, while maintaining the Python API using bindings (e.g., PyO3 for Rust).
-- [ ] **Zero-Knowledge Proofs (ZKPs) for Privacy**: Integrate ZK-SNARKs or ZK-STARKs to allow mathematical proof that an image matches a sensor's fingerprint without revealing the actual PRNU data, preventing spoofing attacks.
-
-### 2. Decentralization & Ledger Integration
-- [ ] **Data Availability & Anchoring**: Anchor Merkle roots of VTR containers to a high-throughput blockchain (e.g., Solana), Layer-2 rollup, or a dedicated Data Availability (DA) layer (e.g., Celestia) for immutable timestamping.
-- [ ] **Decentralized Storage**: Formalize support for storing large VTR container payloads (bundled media and proofs) on decentralized networks like IPFS or Arweave, storing only hashes/URIs in the VTR standard (Future RFC).
-
-### 3. Ecosystem & Standardization
-- [ ] **Conformance Test Suite**: Create a language-agnostic "Conformance Test Vector" repository with pre-calculated dummy images, PRNU signatures, and valid/invalid containers for developers building VTR clients in Go, TypeScript, Swift, etc.
-- [ ] **Hardware Enclave (TEE) Support**: Draft RFC-003 to include specifications for extracting and signing data directly within a device's Trusted Execution Environment (e.g., Apple Secure Enclave, ARM TrustZone) to provide hardware-signed attestation combined with PRNU matches.
+- [ ] (None)
 
 ## ✅ Completed
 - [x] Operation Hard Truth (Security Hardening: Decouple Economics)
@@ -11674,12 +11782,14 @@ class TestKDFStrength(unittest.TestCase):
 
         # Keys with custom salt
         os.environ["VTR_KDF_SALT"] = "custom_salt"
+        MockPRNU._get_kdf_params.cache_clear()
         prnu_custom_salt = MockPRNU(sensor_id)
         pk_custom_salt = prnu_custom_salt.get_public_key()
         self.assertNotEqual(pk_default, pk_custom_salt)
 
         # Keys with custom iterations
         os.environ["VTR_KDF_ITERATIONS"] = "200000"
+        MockPRNU._get_kdf_params.cache_clear()
         prnu_custom_iter = MockPRNU(sensor_id)
         pk_custom_iter = prnu_custom_iter.get_public_key()
         self.assertNotEqual(pk_custom_salt, pk_custom_iter)
@@ -11695,11 +11805,13 @@ class TestKDFStrength(unittest.TestCase):
         # Test default
         if "VTR_KDF_ITERATIONS" in os.environ:
             del os.environ["VTR_KDF_ITERATIONS"]
+        MockPRNU._get_kdf_params.cache_clear()
         prnu_default = MockPRNU(sensor_id)
         pk_default = prnu_default.get_public_key()
 
         # Test attack - should use 100000 instead of 1
         os.environ["VTR_KDF_ITERATIONS"] = "1"
+        MockPRNU._get_kdf_params.cache_clear()
         prnu_attack = MockPRNU(sensor_id)
         pk_attack = prnu_attack.get_public_key()
 
@@ -11885,6 +11997,24 @@ class TestMockPRNU(unittest.TestCase):
             # Restore environment
             if old_liveness is not None:
                 os.environ["VTR_TEST_LIVENESS"] = old_liveness
+
+    def test_static_hash_video_content(self):
+        """Verifies _static_hash_video_content returns a valid 64-char hex string."""
+        test_file = "dummy_video_for_hash.mp4"
+        try:
+            with open(test_file, "wb") as f:
+                f.write(b"dummy video data for hashing test")
+
+            hash_result = MockPRNU._static_hash_video_content(test_file)
+
+            self.assertIsInstance(hash_result, str)
+            self.assertEqual(len(hash_result), 64)
+            # Verify it's a valid hex string
+            int(hash_result, 16)
+        finally:
+            if os.path.exists(test_file):
+                os.remove(test_file)
+
     def test_location_block_hash_logic(self):
         """Tests that location block hash is deterministic and configurable."""
         from unittest.mock import patch
@@ -11913,6 +12043,7 @@ class TestMockPRNU(unittest.TestCase):
         # 3. Test KDF Binding (VTR_KDF_SALT)
         # The location hash is derived using the same KDF salt as the public key.
         with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}):
+            MockPRNU._get_kdf_params.cache_clear()
             prnu_salted = MockPRNU(sensor_id)
             hash_salted = prnu_salted.calculate_location_block_hash()
             self.assertNotEqual(hash1, hash_salted, "Hash should change with VTR_KDF_SALT override")
