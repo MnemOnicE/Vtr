@@ -1,3 +1,8 @@
+# Copyright (c) 2025 OntoLogics (Seth & Axion). All rights reserved.
+# Licensed under the VTR Public License (VTR-PL), Version 1.0 (the "License").
+# A copy of the License is available in the root/vtr_standard/poc/LICENSE file.
+# This code is distributed WITHOUT ANY WARRANTY.
+
 import unittest
 import hashlib
 from vtr_standard.poc.mock_prnu import MockPRNU
@@ -32,56 +37,72 @@ class TestKDFStrength(unittest.TestCase):
 
     def test_kdf_config_via_env_vars(self):
         import os
-        from unittest.mock import patch
         sensor_id = "config_sensor"
 
         # Original keys
-        MockPRNU._get_kdf_params.cache_clear()
-        MockPRNU._derive_pbkdf2.cache_clear()
-        with patch.dict(os.environ, {}, clear=True):
-            prnu_default = MockPRNU(sensor_id)
-            pk_default = prnu_default.get_public_key()
+        prnu_default = MockPRNU(sensor_id)
+        pk_default = prnu_default.get_public_key()
 
-        # Keys with custom salt
-        os.environ["VTR_KDF_SALT"] = "custom_salt"
-        MockPRNU._get_kdf_params.cache_clear()
-        prnu_custom_salt = MockPRNU(sensor_id)
-        pk_custom_salt = prnu_custom_salt.get_public_key()
-        self.assertNotEqual(pk_default, pk_custom_salt)
+        orig_salt = os.environ.get("VTR_KDF_SALT")
+        orig_iterations = os.environ.get("VTR_KDF_ITERATIONS")
 
-        # Keys with custom iterations
-        os.environ["VTR_KDF_ITERATIONS"] = "200000"
-        MockPRNU._get_kdf_params.cache_clear()
-        prnu_custom_iter = MockPRNU(sensor_id)
-        pk_custom_iter = prnu_custom_iter.get_public_key()
-        self.assertNotEqual(pk_custom_salt, pk_custom_iter)
-
-        # Cleanup
-        del os.environ["VTR_KDF_SALT"]
-        del os.environ["VTR_KDF_ITERATIONS"]
-        MockPRNU._get_kdf_params.cache_clear()
-        MockPRNU._derive_pbkdf2.cache_clear()
-        with patch.dict(os.environ, {"VTR_KDF_SALT": "custom_salt"}, clear=True):
+        try:
+            # Keys with custom salt
+            os.environ["VTR_KDF_SALT"] = "custom_salt"
+            MockPRNU._get_kdf_params.cache_clear()
             prnu_custom_salt = MockPRNU(sensor_id)
             pk_custom_salt = prnu_custom_salt.get_public_key()
             self.assertNotEqual(pk_default, pk_custom_salt)
 
-        # Keys with custom iterations
-        MockPRNU._get_kdf_params.cache_clear()
-        MockPRNU._derive_pbkdf2.cache_clear()
-        with patch.dict(os.environ, {"VTR_KDF_SALT": "custom_salt", "VTR_KDF_ITERATIONS": "200000"}, clear=True):
+            # Keys with custom iterations
+            os.environ["VTR_KDF_ITERATIONS"] = "200000"
+            MockPRNU._get_kdf_params.cache_clear()
             prnu_custom_iter = MockPRNU(sensor_id)
             pk_custom_iter = prnu_custom_iter.get_public_key()
             self.assertNotEqual(pk_custom_salt, pk_custom_iter)
+        finally:
+            # Cleanup
+            if orig_salt is None:
+                if "VTR_KDF_SALT" in os.environ:
+                    del os.environ["VTR_KDF_SALT"]
+            else:
+                os.environ["VTR_KDF_SALT"] = orig_salt
+            if orig_iterations is None:
+                if "VTR_KDF_ITERATIONS" in os.environ:
+                    del os.environ["VTR_KDF_ITERATIONS"]
+            else:
+                os.environ["VTR_KDF_ITERATIONS"] = orig_iterations
+            MockPRNU._get_kdf_params.cache_clear()
 
     def test_kdf_downgrade_mitigation(self):
         import os
-        from unittest.mock import patch
         sensor_id = "downgrade_sensor"
 
-        # Test default
-        if "VTR_KDF_ITERATIONS" in os.environ:
-            del os.environ["VTR_KDF_ITERATIONS"]
+        orig_iterations = os.environ.get("VTR_KDF_ITERATIONS")
+
+        try:
+            # Test default
+            if "VTR_KDF_ITERATIONS" in os.environ:
+                del os.environ["VTR_KDF_ITERATIONS"]
+            MockPRNU._get_kdf_params.cache_clear()
+            prnu_default = MockPRNU(sensor_id)
+            pk_default = prnu_default.get_public_key()
+
+            # Test attack - should use 100000 instead of 1
+            os.environ["VTR_KDF_ITERATIONS"] = "1"
+            MockPRNU._get_kdf_params.cache_clear()
+            prnu_attack = MockPRNU(sensor_id)
+            pk_attack = prnu_attack.get_public_key()
+
+            self.assertEqual(pk_default, pk_attack, "Downgrade attack should be mitigated by enforcing minimum iterations")
+        finally:
+            # Cleanup
+            if orig_iterations is None:
+                if "VTR_KDF_ITERATIONS" in os.environ:
+                    del os.environ["VTR_KDF_ITERATIONS"]
+            else:
+                os.environ["VTR_KDF_ITERATIONS"] = orig_iterations
+            MockPRNU._get_kdf_params.cache_clear()
         MockPRNU._get_kdf_params.cache_clear()
         prnu_default = MockPRNU(sensor_id)
         pk_default = prnu_default.get_public_key()
@@ -91,20 +112,11 @@ class TestKDFStrength(unittest.TestCase):
         MockPRNU._get_kdf_params.cache_clear()
         prnu_attack = MockPRNU(sensor_id)
         pk_attack = prnu_attack.get_public_key()
-        MockPRNU._get_kdf_params.cache_clear()
-        MockPRNU._derive_pbkdf2.cache_clear()
-        with patch.dict(os.environ, {}, clear=True):
-            prnu_default = MockPRNU(sensor_id)
-            pk_default = prnu_default.get_public_key()
-
-        # Test attack - should use 100000 instead of 1
-        MockPRNU._get_kdf_params.cache_clear()
-        MockPRNU._derive_pbkdf2.cache_clear()
-        with patch.dict(os.environ, {"VTR_KDF_ITERATIONS": "1"}, clear=True):
-            prnu_attack = MockPRNU(sensor_id)
-            pk_attack = prnu_attack.get_public_key()
 
         self.assertEqual(pk_default, pk_attack, "Downgrade attack should be mitigated by enforcing minimum iterations")
+
+        # Cleanup
+        del os.environ["VTR_KDF_ITERATIONS"]
 
 if __name__ == "__main__":
     unittest.main()

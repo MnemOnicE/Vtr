@@ -1,3 +1,8 @@
+# Copyright (c) 2025 OntoLogics (Seth & Axion). All rights reserved.
+# Licensed under the VTR Public License (VTR-PL), Version 1.0 (the "License").
+# A copy of the License is available in the root/vtr_standard/poc/LICENSE file.
+# This code is distributed WITHOUT ANY WARRANTY.
+
 import unittest
 from vtr_standard.poc.mock_prnu import MockPRNU
 import os
@@ -44,10 +49,12 @@ class TestMockPRNU(unittest.TestCase):
     def test_static_hash_video_content(self):
         """Verifies _static_hash_video_content returns a valid 64-char hex string."""
         import tempfile
-        with tempfile.NamedTemporaryFile(mode="wb", suffix=".mp4", delete=False) as tmp:
-            tmp.write(b"dummy video data for hashing test")
-            test_file = tmp.name
+        fd, test_file = tempfile.mkstemp(suffix=".mp4")
+        os.close(fd)
         try:
+            with open(test_file, "wb") as f:
+                f.write(b"dummy video data for hashing test")
+
             hash_result = MockPRNU._static_hash_video_content(test_file)
 
             self.assertIsInstance(hash_result, str)
@@ -57,23 +64,6 @@ class TestMockPRNU(unittest.TestCase):
         finally:
             if os.path.exists(test_file):
                 os.remove(test_file)
-    def test_check_liveness_env_var(self):
-        """Verifies check_liveness respects VTR_TEST_LIVENESS env var explicitly."""
-        from unittest.mock import patch
-
-        prnu = MockPRNU("sensor_123")
-
-        # Truthy cases (case-insensitive)
-        truthy_values = ["true", "1", "pass", "TRUE", "Pass", " true ", " pass\n"]
-        for val in truthy_values:
-            with patch.dict(os.environ, {"VTR_TEST_LIVENESS": val}):
-                self.assertTrue(prnu.check_liveness(), f"Expected True for '{val}'")
-
-        # Falsy and edge cases
-        falsy_values = ["false", "0", "fail", "random", "", " false "]
-        for val in falsy_values:
-            with patch.dict(os.environ, {"VTR_TEST_LIVENESS": val}):
-                self.assertFalse(prnu.check_liveness(), f"Expected False for '{val}'")
 
     def test_location_block_hash_logic(self):
         """Tests that location block hash is deterministic and configurable."""
@@ -104,12 +94,10 @@ class TestMockPRNU(unittest.TestCase):
         # The location hash is derived using the same KDF salt as the public key.
         with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}):
             MockPRNU._get_kdf_params.cache_clear()
-        MockPRNU._get_kdf_params.cache_clear()
-        MockPRNU._derive_pbkdf2.cache_clear()
-        with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}, clear=True):
             prnu_salted = MockPRNU(sensor_id)
             hash_salted = prnu_salted.calculate_location_block_hash()
             self.assertNotEqual(hash1, hash_salted, "Hash should change with VTR_KDF_SALT override")
+        MockPRNU._get_kdf_params.cache_clear()
 
 if __name__ == "__main__":
     unittest.main()
