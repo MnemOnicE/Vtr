@@ -6,7 +6,7 @@
 import os
 import json
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from vtr_standard.poc.validator import VTRValidator, ValidationError
 
 class TestValidator(unittest.TestCase):
@@ -76,24 +76,24 @@ class TestValidator(unittest.TestCase):
         self.assertEqual(internal_newlines, 0, f"Log message contains raw newlines: {repr(log_output)}")
         self.assertIn(" | ", log_output)
 
-    @patch('vtr_standard.poc.validator.VTRValidator._parse_sidecar')
-    def test_video_not_found(self, mock_parse_sidecar):
+    def test_video_not_found(self):
         """Test that validating a non-existent video returns VIDEO_NOT_FOUND."""
         validator = VTRValidator()
         result = validator.validate_container("non_existent_video.mp4")
         self.assertFalse(result.is_valid)
         self.assertEqual(result.error_code, "VIDEO_NOT_FOUND")
+        self.assertIn("Video file not found at", result.message)
 
-    @patch('vtr_standard.poc.validator.VTRValidator._parse_sidecar')
-    def test_video_is_directory(self, mock_parse_sidecar):
-        """Test that validating a directory path as video returns VIDEO_NOT_FOUND or READ_ERROR."""
+    def test_video_is_directory(self):
+        """Test that validating a directory path as video returns VIDEO_NOT_FOUND."""
         dir_path = "test_dir"
         os.makedirs(dir_path, exist_ok=True)
         try:
             validator = VTRValidator()
             result = validator.validate_container(dir_path)
             self.assertFalse(result.is_valid)
-            self.assertIn(result.error_code, ["VIDEO_NOT_FOUND", "READ_ERROR"])
+            self.assertEqual(result.error_code, "VIDEO_NOT_FOUND")
+            self.assertIn("Video path is not a file", result.message)
         finally:
             os.rmdir(dir_path)
 
