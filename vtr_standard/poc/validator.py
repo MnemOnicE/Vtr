@@ -42,43 +42,6 @@ class VTRValidator:
         with open(sidecar_path, 'r') as f:
             raw_data = json.load(f)
         return VTRSidecar.model_validate(raw_data)
-    def validate_container(self, video_path: str, sidecar_path: Optional[str] = None) -> VerificationResult:
-        """Validates a video file against its VTR sidecar.
-
-        Args:
-            video_path (str): The path to the raw video file.
-            sidecar_path (Optional[str]): The path to the .vtr.json sidecar file.
-                If None, it defaults to <video_path>.vtr.json.
-
-        Returns:
-            VerificationResult: The outcome of the validation process.
-        """
-        # 1. Resolve Sidecar Path
-        if sidecar_path is None:
-            sidecar_path = os.path.abspath(f"{video_path}.vtr.json")
-        video_path = os.path.abspath(video_path)
-            sidecar_path = f"{video_path}.vtr.json"
-
-        # 2. Check File Existence
-        if not os.path.exists(video_path):
-            return VerificationResult(
-                is_valid=False,
-                error_code="VIDEO_NOT_FOUND",
-                message=f"Video file not found at: {video_path}"
-            )
-        if not os.path.isfile(video_path):
-            return VerificationResult(
-                is_valid=False,
-                error_code="VIDEO_NOT_FOUND",
-                message=f"Video path is not a file: {video_path}"
-            )
-        if not os.path.exists(sidecar_path):
-            return VerificationResult(
-                is_valid=False,
-                error_code="SIDECAR_NOT_FOUND",
-                message=f"Sidecar file not found at: {sidecar_path}"
-            )
-
     def _verify_crypto_binding(self, sidecar: VTRSidecar, video_path: str) -> VerificationResult:
         hw_sig = sidecar.hardware_signature
 
@@ -189,7 +152,8 @@ class VTRValidator:
         """
         # 1. Resolve Sidecar Path
         if sidecar_path is None:
-            sidecar_path = f"{video_path}.vtr.json"
+            sidecar_path = os.path.abspath(f"{video_path}.vtr.json")
+        video_path = os.path.abspath(video_path)
 
         # 2. Parse Sidecar
         try:

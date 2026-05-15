@@ -38,6 +38,37 @@ class TestMockPRNU(unittest.TestCase):
             # Restore environment
             if old_liveness is not None:
                 os.environ["VTR_TEST_LIVENESS"] = old_liveness
+    def test_location_block_hash_logic(self):
+        """Tests that location block hash is deterministic and configurable."""
+        from unittest.mock import patch
+
+        sensor_id = "sensor_123"
+
+        # 1. Test Default Stability
+        prnu1 = MockPRNU(sensor_id)
+        hash1 = prnu1.calculate_location_block_hash()
+        self.assertEqual(len(hash1), 64, "Hash should be 64-char hex string (SHA256)")
+
+        prnu2 = MockPRNU(sensor_id)
+        self.assertEqual(hash1, prnu2.calculate_location_block_hash(), "Hash should be deterministic")
+
+        # 2. Test VTR_TEST_GPS override
+        custom_gps = "40.7128,-74.0060" # NYC
+        with patch.dict(os.environ, {"VTR_TEST_GPS": custom_gps}):
+            prnu_nyc = MockPRNU(sensor_id)
+            hash_nyc = prnu_nyc.calculate_location_block_hash()
+            self.assertNotEqual(hash1, hash_nyc, "Hash should change with VTR_TEST_GPS override")
+
+            # Verify consistency for same override
+            prnu_nyc_2 = MockPRNU(sensor_id)
+            self.assertEqual(hash_nyc, prnu_nyc_2.calculate_location_block_hash())
+
+        # 3. Test KDF Binding (VTR_KDF_SALT)
+        # The location hash is derived using the same KDF salt as the public key.
+        with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}):
+            prnu_salted = MockPRNU(sensor_id)
+            hash_salted = prnu_salted.calculate_location_block_hash()
+            self.assertNotEqual(hash1, hash_salted, "Hash should change with VTR_KDF_SALT override")
 
 if __name__ == "__main__":
     unittest.main()
