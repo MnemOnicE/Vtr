@@ -57,6 +57,23 @@ class TestMockPRNU(unittest.TestCase):
         finally:
             if os.path.exists(test_file):
                 os.remove(test_file)
+    def test_check_liveness_env_var(self):
+        """Verifies check_liveness respects VTR_TEST_LIVENESS env var explicitly."""
+        from unittest.mock import patch
+
+        prnu = MockPRNU("sensor_123")
+
+        # Truthy cases (case-insensitive)
+        truthy_values = ["true", "1", "pass", "TRUE", "Pass", " true ", " pass\n"]
+        for val in truthy_values:
+            with patch.dict(os.environ, {"VTR_TEST_LIVENESS": val}):
+                self.assertTrue(prnu.check_liveness(), f"Expected True for '{val}'")
+
+        # Falsy and edge cases
+        falsy_values = ["false", "0", "fail", "random", "", " false "]
+        for val in falsy_values:
+            with patch.dict(os.environ, {"VTR_TEST_LIVENESS": val}):
+                self.assertFalse(prnu.check_liveness(), f"Expected False for '{val}'")
 
     def test_location_block_hash_logic(self):
         """Tests that location block hash is deterministic and configurable."""
@@ -87,6 +104,9 @@ class TestMockPRNU(unittest.TestCase):
         # The location hash is derived using the same KDF salt as the public key.
         with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}):
             MockPRNU._get_kdf_params.cache_clear()
+        MockPRNU._get_kdf_params.cache_clear()
+        MockPRNU._derive_pbkdf2.cache_clear()
+        with patch.dict(os.environ, {"VTR_KDF_SALT": "new_security_salt_2025"}, clear=True):
             prnu_salted = MockPRNU(sensor_id)
             hash_salted = prnu_salted.calculate_location_block_hash()
             self.assertNotEqual(hash1, hash_salted, "Hash should change with VTR_KDF_SALT override")
