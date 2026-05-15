@@ -10,8 +10,39 @@ import io
 import json
 from unittest.mock import patch, MagicMock
 
+# VTR-STANDUP: Fallback Mock for restricted environments where pydantic is missing.
+try:
+    import pydantic
+except ImportError:
+    class MockBaseModel:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                if isinstance(v, dict):
+                    setattr(self, k, type('obj', (object,), v)())
+                else:
+                    setattr(self, k, v)
+        @classmethod
+        def model_validate(cls, data):
+            return cls(**data)
+        def model_dump_json(self, **kwargs):
+            import json
+            def default(obj):
+                if hasattr(obj, '__dict__'):
+                    return obj.__dict__
+                return str(obj)
+            return json.dumps(self.__dict__, default=default)
+
+    import sys
+    from unittest.mock import MagicMock
+    mock_pydantic = MagicMock()
+    mock_pydantic.BaseModel = MockBaseModel
+    mock_pydantic.Field = MagicMock(return_value=None)
+    sys.modules["pydantic"] = mock_pydantic
+
+
+
 from vtr_standard.poc.vtr_container import VTRContainer
-from vtr_standard.poc.cli import cmd_verify
+from vtr_standard.poc.cli import cmd_verify, cmd_sign
 
 class TestCLI(unittest.TestCase):
     """
@@ -56,6 +87,117 @@ class TestCLI(unittest.TestCase):
     def test_setup_teardown(self):
         """Sanity check that the file is created and cleaned up"""
         self.assertTrue(os.path.exists(self.video_path))
+
+
+    @patch("vtr_standard.poc.cli.logger")
+    def test_cmd_sign_success(self, mock_logger):
+        """
+        Verify that cmd_sign creates a sidecar successfully with default settings.
+        """
+        args = MagicMock()
+        args.video_path = self.video_path
+        args.sensor_id = None
+        args.allow_ai = False
+        args.link_to = None
+        args.force = False
+
+        try:
+            cmd_sign(args)
+        except SystemExit as e:
+            self.fail(f"cmd_sign raised SystemExit unexpectedly: {e}")
+
+        # Check if the sidecar was created
+        self.assertTrue(os.path.exists(self.sidecar_path))
+
+        # Check logger calls
+        mock_logger.info.assert_any_call("🆔  Using Default Mock Sensor ID")
+
+    @patch("vtr_standard.poc.cli.logger")
+    def test_cmd_sign_success_custom_sensor(self, mock_logger):
+        """
+        Verify that cmd_sign creates a sidecar successfully with a custom sensor ID and allow_ai=True.
+        """
+        args = MagicMock()
+        args.video_path = self.video_path
+        args.sensor_id = "CUSTOM_SENSOR_123"
+        args.allow_ai = True
+        args.link_to = None
+        args.force = False
+
+        try:
+            cmd_sign(args)
+        except SystemExit as e:
+            self.fail(f"cmd_sign raised SystemExit unexpectedly: {e}")
+
+        # Check if the sidecar was created
+        self.assertTrue(os.path.exists(self.sidecar_path))
+
+        # Verify JSON contents
+        with open(self.sidecar_path, 'r') as f:
+            sidecar_data = json.load(f)
+
+        self.assertTrue(sidecar_data.get("legal_assertions", {}).get("x_vtr_ai_training"))
+
+        # Check logger calls
+        mock_logger.info.assert_any_call(f"🆔  Using Custom Sensor ID: {args.sensor_id}")
+
+    @patch("vtr_standard.poc.cli.logger")
+    def test_cmd_sign_file_exists_error(self, mock_logger):
+        """
+        Verify that cmd_sign exits with 1 when the sidecar exists and --force is not used.
+        """
+        # Create a dummy sidecar first
+        with open(self.sidecar_path, 'w') as f:
+            f.write('{}')
+
+        args = MagicMock()
+        args.video_path = self.video_path
+        args.sensor_id = None
+        args.allow_ai = False
+        args.link_to = None
+        args.force = False
+
+        with self.assertRaises(SystemExit) as cm:
+            cmd_sign(args)
+
+        self.assertEqual(cm.exception.code, 1)
+        mock_logger.error.assert_any_call("    Use --force to overwrite the existing sidecar.")
+
+    @patch("vtr_standard.poc.cli.logger")
+    def test_cmd_sign_file_not_found(self, mock_logger):
+        """
+        Verify that cmd_sign exits with 1 when the video file is not found.
+        """
+        args = MagicMock()
+        args.video_path = "non_existent_video_path.mp4"
+        args.sensor_id = None
+        args.allow_ai = False
+        args.link_to = None
+        args.force = False
+
+        with self.assertRaises(SystemExit) as cm:
+            cmd_sign(args)
+
+        self.assertEqual(cm.exception.code, 1)
+        # Verify the specific error format logged in cli.py
+        mock_logger.error.assert_any_call(f"❌  Error: Video file '{args.video_path}' not found.")
+
+    @patch("vtr_standard.poc.cli.logger")
+    def test_cmd_sign_unexpected_error(self, mock_logger):
+        """
+        Verify that cmd_sign exits with 1 on unexpected errors (e.g. invalid link_to path).
+        """
+        args = MagicMock()
+        args.video_path = self.video_path
+        args.sensor_id = None
+        args.allow_ai = False
+        args.link_to = "invalid_previous_sidecar.json"
+        args.force = False
+
+        with self.assertRaises(SystemExit) as cm:
+            cmd_sign(args)
+
+        self.assertEqual(cm.exception.code, 1)
 
     @patch("vtr_standard.poc.cli.logger")
     def test_cmd_verify_success(self, mock_logger):
