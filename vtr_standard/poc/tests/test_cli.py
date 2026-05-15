@@ -12,6 +12,7 @@ from unittest.mock import patch, MagicMock
 
 from vtr_standard.poc.vtr_container import VTRContainer
 from vtr_standard.poc.cli import cmd_verify
+from vtr_standard.poc.mock_prnu import MockPRNU
 
 class TestCLI(unittest.TestCase):
     """
@@ -20,6 +21,9 @@ class TestCLI(unittest.TestCase):
 
     def setUp(self):
         # Setup environment variables for deterministic mock behavior
+        os.environ["VTR_TEST_LIVENESS"] = "true"
+        os.environ["VTR_TEST_GPS"] = "34.0522,-118.2437"
+
         # Use patch.dict instead of setting os.environ directly to avoid state leakage
         self.env_patcher = patch.dict(os.environ, {
             "VTR_TEST_LIVENESS": "true",
@@ -29,7 +33,6 @@ class TestCLI(unittest.TestCase):
         self.env_patcher.start()
 
         # Clear LRU caches that depend on environment variables
-        from vtr_standard.poc.mock_prnu import MockPRNU
         MockPRNU._get_kdf_params.cache_clear()
 
         self.video_path = "test_cli_video.mp4"
@@ -50,7 +53,6 @@ class TestCLI(unittest.TestCase):
                 os.remove(self.sidecar_path)
         finally:
             self.env_patcher.stop()
-            from vtr_standard.poc.mock_prnu import MockPRNU
             MockPRNU._get_kdf_params.cache_clear()
 
     def test_setup_teardown(self):

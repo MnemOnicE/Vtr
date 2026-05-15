@@ -130,25 +130,18 @@ class VTRContainer:
         logger.info(f"✅ VTR Sidecar created: {filename}")
         logger.info(f"🔒 AI Training Permission: {allow_ai_training}")
 
-
-def ensure_dummy_video(filename):
-    """Auto-generate dummy files if they don't exist.
-
-    Generates a 1MB file of random bytes to simulate video content.
-    """
-    if not os.path.exists(filename):
-        parent_dir = os.path.dirname(filename)
-        if parent_dir:
-            os.makedirs(parent_dir, exist_ok=True)
-        logger.info(f"🎥 Generating dummy video file: {filename}")
-        # Generate 1MB of random bytes to simulate video content
-        with open(filename, 'wb') as f:
-            f.write(os.urandom(1024 * 1024))
-
 if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='%(message)s')
     logger.info("--- OntoLogics VTR Generator v2.0 (Merged POC) ---")
+
+    # DEMO MODE: Auto-generate dummy files if they don't exist
+    def ensure_dummy_video(filename):
+        if not os.path.exists(filename):
+            logger.info(f"🎥 Generating dummy video file: {filename}")
+            # Generate 1MB of random bytes to simulate video content
+            with open(filename, 'wb') as f:
+                f.write(os.urandom(1024 * 1024))
 
     ensure_dummy_video("first_video.mp4")
     ensure_dummy_video("second_video.mp4")
