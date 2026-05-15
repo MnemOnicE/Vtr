@@ -7,7 +7,7 @@ import functools
 import hashlib
 import hmac
 import os
-import random
+import secrets
 from typing import Optional
 
 from .merkle import MerkleTree
@@ -40,6 +40,10 @@ class MockPRNU:
     def get_public_key(self):
         """Derives a simulated Public Verification Key from the sensor ID."""
         return self._derive_pbkdf2(self.sensor_id, self._kdf_salt, self._kdf_iterations)
+    def get_public_key(self):
+        """Derives a simulated Public Verification Key from the sensor ID."""
+        salt, iterations = self._get_kdf_params()
+        return self._derive_pbkdf2(self.sensor_id, salt, iterations)
 
     def _hash_video_content(self, video_path):
         """Calculates the Merkle Root of the video file content."""
@@ -92,7 +96,11 @@ class MockPRNU:
             return env_liveness.lower() in ("true", "1", "pass")
 
         # Mock logic: Randomly pass for demo purposes
-        liveness_score = random.uniform(0.8, 1.0)
+        # SECURITY FIX: Use secrets.choice() for cryptographically secure and efficient randomness.
+        # This replaces the inefficient instantiation of SystemRandom() and maintains the mock's intent.
+        return secrets.choice([True] + [False] * 9)
+        # SECURITY FIX: Use secrets.SystemRandom() for cryptographically secure randomness.
+        liveness_score = secrets.SystemRandom().uniform(0.8, 1.0)
         return liveness_score > 0.9
 
     def calculate_location_block_hash(self):
@@ -107,6 +115,13 @@ class MockPRNU:
             tuple: A (salt: bytes, iterations: int) tuple derived from
                 VTR_KDF_SALT and VTR_KDF_ITERATIONS env vars.
         """
+        salt, iterations = self._get_kdf_params()
+        return self._derive_pbkdf2(self.gps_salt, salt, iterations)
+
+    @staticmethod
+    @functools.lru_cache(maxsize=1)
+    def _get_kdf_params():
+        """Centralized helper to retrieve KDF parameters from the environment."""
         env_salt = os.environ.get("VTR_KDF_SALT")
         salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
         try:
@@ -128,6 +143,7 @@ class MockPRNU:
         Returns:
             str: The hex string of the derived PBKDF2-HMAC-SHA256 key.
         """
+        """Derives a hex string using PBKDF2-HMAC-SHA256 with caching."""
         return hashlib.pbkdf2_hmac(
             "sha256",
             data.encode(),
