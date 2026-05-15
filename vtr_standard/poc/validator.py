@@ -38,6 +38,10 @@ class VTRValidator:
     verification of the hardware signature against the video content.
     """
 
+    def _parse_sidecar(self, sidecar_path: str) -> VTRSidecar:
+        with open(sidecar_path, 'r') as f:
+            raw_data = json.load(f)
+        return VTRSidecar.model_validate(raw_data)
     def validate_container(self, video_path: str, sidecar_path: Optional[str] = None) -> VerificationResult:
         """Validates a video file against its VTR sidecar.
 
@@ -75,43 +79,7 @@ class VTRValidator:
                 message=f"Sidecar file not found at: {sidecar_path}"
             )
 
-        # 3. Load and Parse Sidecar with Pydantic
-        try:
-            with open(sidecar_path, 'r') as f:
-                raw_data = json.load(f)
-
-            # Validate Schema
-            sidecar = VTRSidecar.model_validate(raw_data)
-
-        except json.JSONDecodeError:
-            return VerificationResult(
-                is_valid=False,
-                error_code="INVALID_JSON",
-                message="Sidecar file contains invalid JSON."
-            )
-        except ValidationError as e:
-            # Pydantic validation failed - Log internally, sanitize externally
-            # Sanitize error string to prevent log injection (replacing newlines with |)
-            sanitized_error = " | ".join(str(e).splitlines())
-            logger.error(f"VTR Schema Validation Error: {sanitized_error}")
-            return VerificationResult(
-                is_valid=False,
-                error_code="INVALID_SCHEMA",
-                message="Sidecar file does not match the required VTR schema.",
-                details={"validation_error_count": len(e.errors()) if hasattr(e, 'errors') else 1}
-            )
-        except Exception as e:
-            # Generic read failure - Log internally, sanitize externally
-            logger.error("VTR Sidecar Read Error", exc_info=True)
-            return VerificationResult(
-                is_valid=False,
-                error_code="READ_ERROR",
-                message="An error occurred while reading or parsing the sidecar file.",
-                details={}
-            )
-
-        # 4. Cryptographic Verification
-        # Extract data from the validated model
+    def _verify_crypto_binding(self, sidecar: VTRSidecar, video_path: str) -> VerificationResult:
         hw_sig = sidecar.hardware_signature
 
         public_key = hw_sig.public_key
@@ -123,6 +91,7 @@ class VTRValidator:
         nonce = hw_sig.nonce
 
         # Calculate actual merkle root once to optimize IO
+        # This will open the video file and may raise FileNotFoundError or OSError
         actual_merkle_root = MockPRNU._static_hash_video_content(video_path)
 
         # Verify using MockPRNU static method, passing the pre-calculated hash
@@ -172,9 +141,6 @@ class VTRValidator:
                 details["chained_to_previous_proof"] = True
                 details["previous_proof_hash"] = previous_signature
 
-            # Economic data has been mothballed in V2.2.
-            # We no longer extract or validate it.
-
             return VerificationResult(
                 is_valid=True,
                 message="VTR container is valid.",
@@ -182,7 +148,6 @@ class VTRValidator:
             )
         else:
             # Enhanced debugging for failed signatures
-            # We provide the values that were found/calculated to help diagnose why verification failed.
             expected_proof = MockPRNU.calculate_expected_proof(
                 public_key=public_key,
                 video_hash=actual_merkle_root,
@@ -208,4 +173,73 @@ class VTRValidator:
                     "proof_received": zk_proof,
                     "proof_expected": expected_proof
                 }
+            )
+
+
+    def validate_container(self, video_path: str, sidecar_path: Optional[str] = None) -> VerificationResult:
+        """Validates a video file against its VTR sidecar.
+
+        Args:
+            video_path (str): The path to the raw video file.
+            sidecar_path (Optional[str]): The path to the .vtr.json sidecar file.
+                If None, it defaults to <video_path>.vtr.json.
+
+        Returns:
+            VerificationResult: The outcome of the validation process.
+        """
+        # 1. Resolve Sidecar Path
+        if sidecar_path is None:
+            sidecar_path = f"{video_path}.vtr.json"
+
+        # 2. Parse Sidecar
+        try:
+            sidecar = self._parse_sidecar(sidecar_path)
+        except FileNotFoundError:
+            return VerificationResult(
+                is_valid=False,
+                error_code="SIDECAR_NOT_FOUND",
+                message=f"Sidecar file not found at: {sidecar_path}"
+            )
+        except json.JSONDecodeError:
+            return VerificationResult(
+                is_valid=False,
+                error_code="INVALID_JSON",
+                message="Sidecar file contains invalid JSON."
+            )
+        except ValidationError as e:
+            # Pydantic validation failed - Log internally, sanitize externally
+            sanitized_error = " | ".join(str(e).splitlines())
+            logger.error(f"VTR Schema Validation Error: {sanitized_error}")
+            return VerificationResult(
+                is_valid=False,
+                error_code="INVALID_SCHEMA",
+                message="Sidecar file does not match the required VTR schema.",
+                details={"validation_error_count": len(e.errors()) if hasattr(e, 'errors') else 1}
+            )
+        except OSError as e:
+            # Generic read failure - Log internally, sanitize externally
+            logger.error("VTR Sidecar Read Error", exc_info=True)
+            return VerificationResult(
+                is_valid=False,
+                error_code="READ_ERROR",
+                message="An error occurred while reading or parsing the sidecar file.",
+                details={}
+            )
+
+        # 3. Cryptographic Verification
+        try:
+            return self._verify_crypto_binding(sidecar, video_path)
+        except FileNotFoundError:
+            return VerificationResult(
+                is_valid=False,
+                error_code="VIDEO_NOT_FOUND",
+                message=f"Video file not found at: {video_path}"
+            )
+        except OSError as e:
+            logger.error("VTR Video Read Error", exc_info=True)
+            return VerificationResult(
+                is_valid=False,
+                error_code="READ_ERROR",
+                message="An error occurred while reading the video file.",
+                details={}
             )
