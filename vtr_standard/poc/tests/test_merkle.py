@@ -63,7 +63,8 @@ class TestAsyncFileStream(unittest.TestCase):
         mock_start.assert_called_once()
 
     @patch('vtr_standard.poc.merkle.logger.error')
-    def test_stream_called_twice_raises_runtime_error(self, mock_log_error):
+    @patch('builtins.open', side_effect=FileNotFoundError)
+    def test_stream_called_twice_raises_runtime_error(self, mock_open, mock_log_error):
         """Test that calling stream() twice on the same instance raises RuntimeError due to thread constraints."""
         # The file doesn't exist, so the worker will fail safely, log an error, and put None.
         streamer = AsyncFileStream("dummy_path", 1024)
