@@ -3,6 +3,7 @@
 # A copy of the License is available in the root/vtr_standard/poc/LICENSE file.
 # This code is distributed WITHOUT ANY WARRANTY.
 
+import functools
 import hashlib
 import hmac
 import os
@@ -33,35 +34,12 @@ class MockPRNU:
         # Check env var for deterministic override: VTR_TEST_GPS
         self.gps_salt = os.environ.get("VTR_TEST_GPS", "34.0522,118.2437")
 
-        # Performance Optimization: Pre-calculate and cache static values
-        # SECURITY FIX: Use PBKDF2-HMAC-SHA256 for robust key derivation instead of simple hashing.
-        # Default domain-specific salt and iterations ensure deterministic output while preventing rainbow tables.
-        # These are configurable via environment variables for future-proofing.
-        env_salt = os.environ.get("VTR_KDF_SALT")
-        kdf_salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
-
-        try:
-            iterations = max(100000, int(os.environ.get("VTR_KDF_ITERATIONS", 100000)))
-        except ValueError:
-            iterations = 100000
-
-        self._cached_public_key = hashlib.pbkdf2_hmac(
-            "sha256",
-            self.sensor_id.encode(),
-            kdf_salt,
-            iterations
-        ).hex()
-
-        self._cached_location_block_hash = hashlib.pbkdf2_hmac(
-            "sha256",
-            self.gps_salt.encode(),
-            kdf_salt,
-            iterations
-        ).hex()
+        # Snapshot KDF parameters to ensure instance stability
+        self._kdf_salt, self._kdf_iterations = self._get_kdf_params()
 
     def get_public_key(self):
         """Derives a simulated Public Verification Key from the sensor ID."""
-        return self._cached_public_key
+        return self._derive_pbkdf2(self.sensor_id, self._kdf_salt, self._kdf_iterations)
 
     def _hash_video_content(self, video_path):
         """Calculates the Merkle Root of the video file content."""
@@ -119,7 +97,43 @@ class MockPRNU:
 
     def calculate_location_block_hash(self):
         """Calculates the hash of the location data (salted)."""
-        return self._cached_location_block_hash
+        return self._derive_pbkdf2(self.gps_salt, self._kdf_salt, self._kdf_iterations)
+
+    @staticmethod
+    def _get_kdf_params():
+        """Centralized helper to retrieve KDF parameters from the environment.
+
+        Returns:
+            tuple: A (salt: bytes, iterations: int) tuple derived from
+                VTR_KDF_SALT and VTR_KDF_ITERATIONS env vars.
+        """
+        env_salt = os.environ.get("VTR_KDF_SALT")
+        salt = env_salt.encode() if env_salt else b"vtr_kdf_salt_2025_canonical"
+        try:
+            iterations = max(100000, int(os.environ.get("VTR_KDF_ITERATIONS", 100000)))
+        except ValueError:
+            iterations = 100000
+        return salt, iterations
+
+    @staticmethod
+    @functools.lru_cache(maxsize=128)
+    def _derive_pbkdf2(data: str, salt: bytes, iterations: int) -> str:
+        """Derives a hex string using PBKDF2-HMAC-SHA256 with caching.
+
+        Args:
+            data (str): The input string to be hashed.
+            salt (bytes): The salt used for PBKDF2.
+            iterations (int): The number of PBKDF2 iterations.
+
+        Returns:
+            str: The hex string of the derived PBKDF2-HMAC-SHA256 key.
+        """
+        return hashlib.pbkdf2_hmac(
+            "sha256",
+            data.encode(),
+            salt,
+            iterations
+        ).hex()
 
     @staticmethod
     def _static_hash_video_content(video_path):
