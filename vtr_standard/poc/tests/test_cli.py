@@ -20,9 +20,6 @@ class TestCLI(unittest.TestCase):
 
     def setUp(self):
         # Setup environment variables for deterministic mock behavior
-        os.environ["VTR_TEST_LIVENESS"] = "true"
-        os.environ["VTR_TEST_GPS"] = "34.0522,-118.2437"
-
         # Use patch.dict instead of setting os.environ directly to avoid state leakage
         self.env_patcher = patch.dict(os.environ, {
             "VTR_TEST_LIVENESS": "true",
